@@ -1,0 +1,92 @@
+declare module 'lucide-react' {
+  import * as React from 'react';
+
+  export interface LucideProps extends React.SVGProps<SVGSVGElement> {
+    size?: string | number;
+    absoluteStrokeWidth?: boolean;
+  }
+
+  export type LucideIcon = React.FC<LucideProps>;
+
+  export const AlertCircle: LucideIcon;
+  export const AlertTriangle: LucideIcon;
+  export const ArrowLeft: LucideIcon;
+  export const ArrowRight: LucideIcon;
+  export const Check: LucideIcon;
+  export const CheckCircle: LucideIcon;
+  export const CheckCircle2: LucideIcon;
+  export const ChevronDown: LucideIcon;
+  export const ChevronRight: LucideIcon;
+  export const ChevronUp: LucideIcon;
+  export const Circle: LucideIcon;
+  export const Clock: LucideIcon;
+  export const Copy: LucideIcon;
+  export const Download: LucideIcon;
+  export const Edit: LucideIcon;
+  export const Eye: LucideIcon;
+  export const EyeOff: LucideIcon;
+  export const File: LucideIcon;
+  export const FileText: LucideIcon;
+  export const Film: LucideIcon;
+  export const Globe: LucideIcon;
+  export const HelpCircle: LucideIcon;
+  export const Image: LucideIcon;
+  export const Info: LucideIcon;
+  export const Layers: LucideIcon;
+  export const Link: LucideIcon;
+  export const List: LucideIcon;
+  export const Loader: LucideIcon;
+  export const Loader2: LucideIcon;
+  export const Mic: LucideIcon;
+  export const Minus: LucideIcon;
+  export const Monitor: LucideIcon;
+  export const Music: LucideIcon;
+  export const Palette: LucideIcon;
+  export const Pause: LucideIcon;
+  export const Play: LucideIcon;
+  export const Plus: LucideIcon;
+  export const RefreshCw: LucideIcon;
+  export const Save: LucideIcon;
+  export const Settings: LucideIcon;
+  export const Sparkles: LucideIcon;
+  export const Square: LucideIcon;
+  export const Star: LucideIcon;
+  export const Trash2: LucideIcon;
+  export const Type: LucideIcon;
+  export const Upload: LucideIcon;
+  export const Video: LucideIcon;
+  export const Volume2: LucideIcon;
+  export const VolumeX: LucideIcon;
+  export const X: LucideIcon;
+  export const XCircle: LucideIcon;
+  export const ZoomIn: LucideIcon;
+  export const ZoomOut: LucideIcon;
+  export const Home: LucideIcon;
+  export const Layout: LucideIcon;
+  export const LayoutDashboard: LucideIcon;
+  export const Lock: LucideIcon;
+  export const LogOut: LucideIcon;
+  export const Menu: LucideIcon;
+  export const Search: LucideIcon;
+  export const Send: LucideIcon;
+  export const Shield: LucideIcon;
+  export const ShieldAlert: LucideIcon;
+  export const Sliders: LucideIcon;
+  export const Tag: LucideIcon;
+  export const Terminal: LucideIcon;
+  export const Tooltip: LucideIcon;
+  export const User: LucideIcon;
+  export const Users: LucideIcon;
+  export const Wand2: LucideIcon;
+  export const Zap: LucideIcon;
+  // Additional icons used in this project
+  export const ClipboardEdit: LucideIcon;
+  export const FileVideo: LucideIcon;
+  export const FileAudio: LucideIcon;
+  export const RefreshCcw: LucideIcon;
+  export const Clapperboard: LucideIcon;
+  export const Paintbrush: LucideIcon;
+  export const ExternalLink: LucideIcon;
+  export const Folder: LucideIcon;
+  export const RotateCcw: LucideIcon;
+}
