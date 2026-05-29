@@ -315,7 +315,7 @@ export const mockProjectTutorial01: Project = {
     SLOT_09: 'Recuerde: la prevención no es una regla impuesta, es un hábito diario para regresar a salvo a su hogar. Ante cualquier peligro no controlado en su sector, informe inmediatamente a su superior. La seguridad la hacemos entre todos.',
     SLOT_10: 'Muchas gracias por su atención y compromiso con la seguridad. Para más información e instructivos detallados, puede visitar nuestro sitio oficial art prevencion smg punto com punto ar.',
   },
-  voiceAudioUrl: null,
+  voiceAudioUrls: {},
   renderStatus: 'idle',
   renderProgress: 0,
 };
@@ -516,7 +516,7 @@ export const mockProjectTutorial02: Project = {
     '09': 'En caso de tener que evacuar, recuerde desplazarse a gatas si hay humo en el pasillo, no utilizar los ascensores por riesgo de quedar atrapado, y dirigirse con calma y sin correr hacia el Punto de Encuentro exterior.',
     SLOT_10: 'Agradecemos su atención y compromiso diario con las prácticas del plan de autoprotección. Recuerde que ante una emergencia, la tranquilidad y el conocimiento salvan vidas.',
   },
-  voiceAudioUrl: null,
+  voiceAudioUrls: {},
   renderStatus: 'idle',
   renderProgress: 0,
 };

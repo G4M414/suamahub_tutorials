@@ -239,29 +239,43 @@ function buildGenericSlide(project: Project, slotId: string, start: number) {
 // ── Main timeline builder ──────────────────────────────────────────────────────
 
 function buildTimeline(project: Project) {
-  const { slots, voiceAudioUrl, identity } = project;
+  const { slots, voiceAudioUrls, identity } = project;
   const allClips: unknown[] = [];
+  const audioClips: unknown[] = [];
   let offset = 0;
 
   for (const slot of slots.filter(s => s.active)) {
     if (slot.id === 'SLOT_01') {
       allClips.push(...buildPortadaSlide(project, offset));
+      if (voiceAudioUrls?.[slot.id]) {
+        audioClips.push({ type: 'audio', src: voiceAudioUrls[slot.id], start: offset, volume: 1 });
+      }
       offset += D;
     } else if (slot.id === 'SLOT_08' && slot.riskModules) {
       for (const rm of slot.riskModules.filter(r => r.active)) {
         allClips.push(...buildRiskSlide(project, rm, offset));
+        if (voiceAudioUrls?.[rm.id]) {
+          audioClips.push({ type: 'audio', src: voiceAudioUrls[rm.id], start: offset, volume: 1 });
+        }
         offset += D;
       }
     } else {
       allClips.push(...buildGenericSlide(project, slot.id, offset));
+      if (voiceAudioUrls?.[slot.id]) {
+        audioClips.push({ type: 'audio', src: voiceAudioUrls[slot.id], start: offset, volume: 1 });
+      }
       offset += D;
     }
   }
 
+  const tracks: unknown[] = [{ clips: allClips.filter(Boolean) }];
+  if (audioClips.length > 0) {
+    tracks.push({ clips: audioClips });
+  }
+
   const timeline: Record<string, unknown> = {
-    soundtrack: voiceAudioUrl ? { src: voiceAudioUrl, effect: 'fadeOut', volume: 1 } : undefined,
     background: identity.colors.background,
-    tracks: [{ clips: allClips.filter(Boolean) }],
+    tracks,
   };
 
   return { timeline, totalDuration: offset };

@@ -80,7 +80,7 @@ export interface Project {
   slots: Slot[];
   media: Record<string, MediaItem>; // maps placeholderId -> MediaItem
   voiceScript: Record<string, string>; // maps slotId -> voice text script
-  voiceAudioUrl: string | null;
+  voiceAudioUrls: Record<string, string>; // maps slotId -> audio URL
   renderStatus?: 'idle' | 'rendering' | 'success' | 'failed';
   renderProgress?: number;
 }

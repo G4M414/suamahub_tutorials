@@ -32,7 +32,7 @@ interface ProjectStore {
   
   // Voice Script
   updateVoiceScript: (slotId: string, script: string) => void;
-  setVoiceAudioUrl: (url: string | null) => void;
+  setVoiceAudioUrl: (slotId: string, url: string | null) => void;
   
   // Render
   setRenderStatus: (status: 'idle' | 'rendering' | 'success' | 'failed', progress?: number) => void;
@@ -213,9 +213,16 @@ export const useProjectStore = create<ProjectStore>()(
           },
         })),
         
-      setVoiceAudioUrl: (url) =>
+      setVoiceAudioUrl: (slotId, url) =>
         set((state) => ({
-          project: { ...state.project, voiceAudioUrl: url },
+          project: {
+            ...state.project,
+            voiceAudioUrls: url
+              ? { ...state.project.voiceAudioUrls, [slotId]: url }
+              : Object.fromEntries(
+                  Object.entries(state.project.voiceAudioUrls).filter(([k]) => k !== slotId)
+                ),
+          },
         })),
         
       setRenderStatus: (status, progress = 0) =>

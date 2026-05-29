@@ -73,7 +73,7 @@ export default function GenerarMP4() {
     slots: activeSlots.length > 0,
     media: totalMedia === 0 || uploadedMedia === totalMedia,
     voice: totalVoice === 0 || voiceScriptsFilled === totalVoice,
-    voiceAudio: !!project.voiceAudioUrl,
+    voiceAudio: Object.keys(project.voiceAudioUrls ?? {}).length > 0,
   };
 
   const allReady = Object.values(checks).every(Boolean);

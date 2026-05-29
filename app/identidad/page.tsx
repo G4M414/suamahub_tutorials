@@ -204,10 +204,11 @@ export default function IdentidadVisual() {
                 <select
                   value={project.industry}
                   onChange={e => setIndustry(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
+                  className="w-full px-3 py-2.5 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
+                  style={{ colorScheme: 'dark' }}
                 >
                   {['Hotel', 'Restaurante', 'Empresa genérica', 'Construcción', 'Salud', 'Educación', 'Otro'].map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
+                    <option key={opt} value={opt} style={{ backgroundColor: '#020617', color: 'white' }}>{opt}</option>
                   ))}
                 </select>
               </div>

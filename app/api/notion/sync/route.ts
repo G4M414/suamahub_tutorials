@@ -162,8 +162,11 @@ function buildPageBody(project: Project): object[] {
 
   // ── AUDIO ─────────────────────────────────────────────────────────────────
   blocks.push(blk.h1('🎙 Audio'));
-  if (project.voiceAudioUrl?.startsWith('http')) {
-    blocks.push(blk.link('Audio de voz en off (Drive)', project.voiceAudioUrl));
+  const audioEntries = Object.entries(project.voiceAudioUrls ?? {}).filter(([, u]) => u?.startsWith('http'));
+  if (audioEntries.length > 0) {
+    for (const [slotId, url] of audioEntries) {
+      blocks.push(blk.link(`Audio ${slotId} (Drive)`, url));
+    }
   } else {
     blocks.push(blk.p('Audio: pendiente'));
   }
@@ -390,9 +393,11 @@ async function upsertProyectos(
   }
 
   // ── Audio ──
-  if (project.voiceAudioUrl?.startsWith('http')) {
-    await upsertAssetRow(clientId, clientName, project.projectName, tutorialLabel,
-      'Audio Voz en Off', project.voiceAudioUrl, estado, tipo, '');
+  for (const [slotId, url] of Object.entries(project.voiceAudioUrls ?? {})) {
+    if (url?.startsWith('http')) {
+      await upsertAssetRow(clientId, clientName, project.projectName, tutorialLabel,
+        `Audio ${slotId}`, url, estado, tipo, '');
+    }
   }
 
   // ── MP4 final ──

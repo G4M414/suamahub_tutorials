@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const projectJson = JSON.stringify({
       media: project.media,
       voiceScript: project.voiceScript,
-      voiceAudioUrl: project.voiceAudioUrl,
+      voiceAudioUrls: project.voiceAudioUrls,
       identity: project.identity,
       slots: project.slots,
       clientName: project.clientName,

@@ -21,7 +21,6 @@ import {
   Clock,
   Download,
   Link as LinkIcon,
-  Upload,
 } from 'lucide-react';
 
 type PreviewStatus = 'idle' | 'loading' | 'playing' | 'error';
@@ -51,10 +50,13 @@ export default function VozEnOff() {
 
   const [previewStates, setPreviewStates] = useState<Record<string, SlotPreviewState>>({});
   const [downloadLoading, setDownloadLoading] = useState(false);
-  const [publicAudioUrl, setPublicAudioUrl] = useState(project.voiceAudioUrl ?? '');
-  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [publicAudioUrl, setPublicAudioUrl] = useState('');
   const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({});
-  const audioFileRef = useRef<HTMLInputElement>(null);
+
+  // Sync URL input when selected slot changes
+  React.useEffect(() => {
+    setPublicAudioUrl(project.voiceAudioUrls?.[selectedSlotId] ?? '');
+  }, [selectedSlotId, project.voiceAudioUrls]);
 
   // Build voice items list: active slots + risk sub-modules
   const voiceItems: VoiceItem[] = project.slots
@@ -192,33 +194,8 @@ export default function VozEnOff() {
   };
 
   const handleSavePublicUrl = () => {
-    if (publicAudioUrl.trim()) {
-      setVoiceAudioUrl(publicAudioUrl.trim());
-    }
-  };
-
-  const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingAudio(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('clientName', project.clientName || 'Sin nombre');
-      fd.append('subfolder', 'Audio');
-
-      const res = await fetch('/api/drive/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      setPublicAudioUrl(data.url);
-      setVoiceAudioUrl(data.url);
-    } catch (err) {
-      console.error('Audio upload error:', err);
-    } finally {
-      setIsUploadingAudio(false);
-    }
+    const trimmed = publicAudioUrl.trim();
+    setVoiceAudioUrl(selectedSlotId, trimmed || null);
   };
 
   return (
@@ -321,9 +298,9 @@ export default function VozEnOff() {
             >
               {downloadLoading ? 'Generando…' : 'Descargar Audio MP3'}
             </Button>
-            {project.voiceAudioUrl && (
+            {Object.keys(project.voiceAudioUrls ?? {}).length > 0 && (
               <p className="text-[10px] text-primary font-semibold text-center flex items-center justify-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> URL de audio configurada
+                <CheckCircle2 className="w-3 h-3" /> {Object.keys(project.voiceAudioUrls).length} audio(s) configurado(s)
               </p>
             )}
           </div>
@@ -434,52 +411,39 @@ export default function VozEnOff() {
                 </div>
               </Card>
 
-              {/* Audio final — siempre visible */}
+              {/* Audio por módulo */}
               <Card className="space-y-4 border-primary/20 bg-primary/5">
                 <div className="flex items-center gap-2">
                   <FileAudio className="w-4 h-4 text-primary shrink-0" />
-                  <h3 className="text-sm font-bold text-white">Audio Final para el Video</h3>
-                  {project.voiceAudioUrl && (
+                  <h3 className="text-sm font-bold text-white">Audio para esta escena</h3>
+                  {project.voiceAudioUrls?.[selectedSlotId] && (
                     <span className="ml-auto text-[10px] text-primary font-semibold flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" /> Configurado
                     </span>
                   )}
                 </div>
 
-                {/* Opción A: subir MP3 directo */}
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Opción A — Subir MP3</p>
-                  <input ref={audioFileRef} type="file" accept="audio/*" className="hidden" onChange={handleAudioFileUpload} />
-                  <button
-                    onClick={() => audioFileRef.current?.click()}
-                    disabled={isUploadingAudio}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 text-sm text-slate-300 transition disabled:opacity-50"
+                <p className="text-[10px] text-slate-400">
+                  Generá el audio en <strong className="text-slate-300">elevenlabs.io</strong> → subilo a Google Drive → copiá la URL pública y pegala acá.
+                </p>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={publicAudioUrl}
+                    onChange={e => setPublicAudioUrl(e.target.value)}
+                    placeholder="https://drive.google.com/uc?id=..."
+                    icon={<LinkIcon className="w-3.5 h-3.5" />}
+                  />
+                  <Button
+                    onClick={handleSavePublicUrl}
+                    variant="primary"
+                    size="sm"
                   >
-                    {isUploadingAudio
-                      ? <><Loader2 className="w-4 h-4 animate-spin text-primary" /> Subiendo a Drive…</>
-                      : <><Upload className="w-4 h-4 text-primary" /> Arrastrá o seleccioná tu MP3 / WAV</>
-                    }
-                  </button>
-                  <p className="text-[10px] text-slate-500 mt-1">Generalo en elevenlabs.io (gratis) → descargá → subí acá. Se guarda en Drive automáticamente.</p>
+                    Guardar
+                  </Button>
                 </div>
 
-                {/* Opción B: pegar URL */}
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Opción B — Pegar URL de Drive</p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={publicAudioUrl}
-                      onChange={e => setPublicAudioUrl(e.target.value)}
-                      placeholder="https://drive.google.com/uc?id=..."
-                      icon={<LinkIcon className="w-3.5 h-3.5" />}
-                    />
-                    <Button onClick={handleSavePublicUrl} variant="primary" size="sm" disabled={!publicAudioUrl.trim()}>
-                      Guardar
-                    </Button>
-                  </div>
-                </div>
-
-                {project.voiceAudioUrl && (
+                {project.voiceAudioUrls?.[selectedSlotId] && (
                   <p className="text-[10px] text-primary font-medium flex items-center gap-1 pt-1 border-t border-primary/10">
                     <CheckCircle2 className="w-3 h-3" /> Audio listo para Shotstack
                   </p>
