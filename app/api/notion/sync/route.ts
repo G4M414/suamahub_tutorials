@@ -254,7 +254,22 @@ const MEDIA_MODULE_NAMES: Record<string, string> = {
 };
 
 async function findAssetRow(clientId: string, tutorialLabel: string, moduleName: string): Promise<string | null> {
-  const res = await nfetch(`${NOTION_BASE}/databases/${PROYECTOS_DB}/query`, {
+  // Busca primero por Módulo tag (más robusto ante datos viejos con Nombre interno incorrecto)
+  const byTag = await nfetch(`${NOTION_BASE}/databases/${PROYECTOS_DB}/query`, {
+    method: 'POST', headers: h,
+    body: JSON.stringify({
+      filter: { and: [
+        { property: 'Cliente', relation: { contains: clientId } },
+        { property: 'Tutorial', select: { equals: tutorialLabel } },
+        { property: 'Módulo', multi_select: { contains: moduleName.replace(/,/g, ' ·') } },
+      ]},
+    }),
+  });
+  const tagResult = (await byTag.json()).results?.[0]?.id ?? null;
+  if (tagResult) return tagResult;
+
+  // Fallback: busca por Nombre interno (para filas sin tag aún)
+  const byName = await nfetch(`${NOTION_BASE}/databases/${PROYECTOS_DB}/query`, {
     method: 'POST', headers: h,
     body: JSON.stringify({
       filter: { and: [
@@ -264,7 +279,7 @@ async function findAssetRow(clientId: string, tutorialLabel: string, moduleName:
       ]},
     }),
   });
-  return (await res.json()).results?.[0]?.id ?? null;
+  return (await byName.json()).results?.[0]?.id ?? null;
 }
 
 async function archivePage(pageId: string): Promise<void> {
