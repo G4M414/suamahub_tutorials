@@ -267,6 +267,12 @@ async function findAssetRow(clientId: string, tutorialLabel: string, moduleName:
   return (await res.json()).results?.[0]?.id ?? null;
 }
 
+async function archivePage(pageId: string): Promise<void> {
+  await nfetch(`${NOTION_BASE}/pages/${pageId}`, {
+    method: 'PATCH', headers: h, body: JSON.stringify({ archived: true }),
+  });
+}
+
 async function upsertAssetRow(
   clientId: string,
   clientName: string,
@@ -379,6 +385,9 @@ async function upsertProyectos(
       clientId, clientName, project.projectName, tutorialLabel,
       moduleName, driveUrl ?? '', estado, tipo, contenido, audioUrl,
     );
+    // Limpiar fila huérfana creada por la versión anterior del código
+    const orphanId = await findAssetRow(clientId, tutorialLabel, `Audio ${slot.id}`);
+    if (orphanId) await archivePage(orphanId);
   }
 
   // ── Módulos de riesgo (SLOT_08) ──
@@ -393,6 +402,9 @@ async function upsertProyectos(
         clientId, clientName, project.projectName, tutorialLabel,
         rm.name, driveUrl ?? '', estado, tipo, contenido, audioUrl,
       );
+      // Limpiar fila huérfana creada por la versión anterior del código
+      const orphanId = await findAssetRow(clientId, tutorialLabel, `Audio ${rm.id}`);
+      if (orphanId) await archivePage(orphanId);
     }
   }
 
