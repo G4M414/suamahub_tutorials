@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Project, ColorPalette, Slot, MediaItem, RiskSubModule } from './types';
+import { Project, ColorPalette, Slot, MediaItem, RiskSubModule, NotionClient } from './types';
 import { mockProjectTutorial01, mockProjectTutorial02 } from './mock-data';
 
 interface ProjectStore {
@@ -16,6 +16,8 @@ interface ProjectStore {
   updateColors: (colors: Partial<ColorPalette>) => void;
   updateFont: (font: string) => void;
   updateLogo: (logoUrl: string | null) => void;
+  setSecondaryText: (text: string) => void;
+  loadClientIdentity: (client: NotionClient) => void;
   
   // Slots
   toggleSlot: (slotId: string, active: boolean) => void;
@@ -38,6 +40,7 @@ interface ProjectStore {
   // Reset
   resetToDemo: () => void;
   loadTutorial: (tutorialId: 'tutorial_01' | 'tutorial_02') => void;
+  fillMissingScripts: () => void;
 }
 
 export const useProjectStore = create<ProjectStore>()(
@@ -92,6 +95,35 @@ export const useProjectStore = create<ProjectStore>()(
           },
         })),
         
+      setSecondaryText: (text) =>
+        set((state) => ({
+          project: {
+            ...state.project,
+            identity: { ...state.project.identity, secondaryText: text },
+          },
+        })),
+
+      // Carga la identidad de un cliente desde Notion.
+      // Quirúrgico: solo pisa datos del cliente + identidad visual.
+      // NO toca slots, media, voiceScript ni tutorialId (el contenido se conserva).
+      loadClientIdentity: (client) =>
+        set((state) => ({
+          project: {
+            ...state.project,
+            clientName: client.clientName || state.project.clientName,
+            companyName: client.companyName || state.project.companyName,
+            industry: client.industry || state.project.industry,
+            identity: {
+              ...state.project.identity,
+              logoUrl: client.logoUrl ?? state.project.identity.logoUrl,
+              fontFamily: client.fontFamily || state.project.identity.fontFamily,
+              colors: { ...state.project.identity.colors, ...client.colors },
+              secondaryText: client.secondaryText ?? state.project.identity.secondaryText ?? '',
+              assetsFolderUrl: client.assetsFolderUrl ?? state.project.identity.assetsFolderUrl,
+            },
+          },
+        })),
+
       toggleSlot: (slotId, active) =>
         set((state) => ({
           project: {
@@ -210,10 +242,48 @@ export const useProjectStore = create<ProjectStore>()(
             )
           ),
         })),
+
+      fillMissingScripts: () =>
+        set((state) => {
+          const template = state.project.tutorialId === 'tutorial_01'
+            ? mockProjectTutorial01
+            : mockProjectTutorial02;
+          const filled: Record<string, string> = {};
+          for (const [key, val] of Object.entries(template.voiceScript)) {
+            if (!state.project.voiceScript[key]?.trim()) {
+              filled[key] = val as string;
+            }
+          }
+          if (Object.keys(filled).length === 0) return state;
+          return {
+            project: {
+              ...state.project,
+              voiceScript: { ...state.project.voiceScript, ...filled },
+            },
+          };
+        }),
     }),
     {
       name: 'suama-project-storage',
-      // only persist basic configurations if needed, but for simplicity persist entire state
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const DEFAULT_LOGO = '/logo-suama.jpg';
+        const logo = state.project.identity.logoUrl;
+
+        // Reemplazar blob URLs (solo válidas en la sesión original) con el logo default
+        if (logo?.startsWith('blob:')) {
+          state.project.identity.logoUrl = DEFAULT_LOGO;
+        }
+
+        // Limpiar media con blob URLs — quedan sin URL para re-subir
+        const cleanedMedia = { ...state.project.media };
+        for (const key of Object.keys(cleanedMedia)) {
+          if (cleanedMedia[key]?.url?.startsWith('blob:')) {
+            cleanedMedia[key] = { ...cleanedMedia[key], url: null, generationStatus: 'idle' };
+          }
+        }
+        state.project.media = cleanedMedia;
+      },
     }
   )
 );

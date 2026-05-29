@@ -44,6 +44,27 @@ export const mockProjectTutorial01: Project = {
       },
     },
     {
+      id: 'SLOT_03B',
+      title: 'Obligaciones, Deberes y Derechos',
+      active: true,
+      mediaId: 'slot_03b_img',
+      fields: {
+        title: 'Obligaciones, Deberes y Derechos',
+        trabajadoresDuties: [
+          'Recibir información y capacitación sobre prevención de riesgos, debiendo participar en las acciones preventivas.',
+          'Cumplir con las Normas de Higiene y Seguridad.',
+          'Informar al empleador los hechos que conozcan relacionados con los riesgos del trabajo.',
+          'Denunciar ante el empleador los accidentes y enfermedades profesionales.',
+        ],
+        empleadoresDuties: [
+          'Proveer a los trabajadores de equipos de protección personal adecuados.',
+          'Garantizar condiciones seguras e higiénicas en el lugar de trabajo.',
+          'Capacitar al personal en materia de higiene y seguridad.',
+          'Denunciar los accidentes de trabajo y enfermedades profesionales a la ART.',
+        ],
+      },
+    },
+    {
       id: 'SLOT_04',
       title: 'Definiciones Clave',
       active: true,
@@ -235,7 +256,7 @@ export const mockProjectTutorial01: Project = {
       ],
     },
     {
-      id: '09',
+      id: 'SLOT_09',
       title: 'Tips Finales',
       active: true,
       fields: {
@@ -264,7 +285,7 @@ export const mockProjectTutorial01: Project = {
       placeholderId: 'portada_img',
       type: 'image',
       source: 'upload',
-      url: '/images/portada-placeholder.jpg',
+      url: null,
       fileName: 'default_portada.jpg',
     },
     'media_08a': { id: 'media_08a_default', placeholderId: 'media_08a', type: 'image', source: 'upload', url: null },
@@ -279,6 +300,7 @@ export const mockProjectTutorial01: Project = {
     SLOT_01: 'Bienvenidos a la capacitación sobre prevención de riesgos en hoteles y restaurantes. Este tutorial contiene normas fundamentales de higiene y seguridad para proteger su salud y bienestar durante el trabajo.',
     SLOT_02: 'El objetivo principal de este curso es que cada participante conozca los factores que originan riesgos y peligros, permitiéndoles identificar, clasificar y mitigar desvíos para evitar accidentes.',
     SLOT_03: 'Toda nuestra actividad se rige bajo la Ley de Higiene y Seguridad 19.587, su Decreto Reglamentario 351 del 79, y la Ley de Riesgos del Trabajo 24.557. Cumplir estas normativas es una obligación legal y de protección mutua.',
+    SLOT_03B: 'La seguridad es una responsabilidad compartida. Los trabajadores deben recibir capacitación y participar en las acciones preventivas, cumplir las normas de higiene y seguridad, informar los riesgos que detecten y denunciar accidentes o enfermedades profesionales. Por su parte, los empleadores deben proveer equipos de protección adecuados, garantizar condiciones seguras, capacitar al personal y denunciar los accidentes a la ART.',
     SLOT_04: 'Es vital diferenciar un accidente, que produce un daño real, de un incidente, donde hubo peligro pero no se concretó el daño. Además, la pirámide de accidentes nos muestra que reducir incidentes diarios evita lesiones graves futuras.',
     SLOT_05: 'Prevenir es un deber moral para no dañar la salud, un mandato legal para reducir siniestros, y una decisión económica y competitiva que disminuye costos de ART, mejora el clima de trabajo y potencia la reputación empresarial.',
     SLOT_06: 'Partimos del principio de que todos los accidentes son evitables. La dirección tiene la responsabilidad de proveer recursos, pero cada empleado es protagonista al formarse en seguridad y aplicar las mejores prácticas operativas.',
@@ -290,7 +312,7 @@ export const mockProjectTutorial01: Project = {
     '08e': 'Peligro de incendios. La acumulación de grasa en campanas y fallas eléctricas son los mayores riesgos en cocinas. Mantenga limpia y desengrasada la campana de extracción, conozca la ubicación de extintores y las vías de evacuación.',
     '08f': 'Productos químicos. El contacto con detergentes industriales o mezclas peligrosas como cloro con amoníaco causan lesiones. Use guantes de nitrilo, antiparras, lea las hojas de seguridad y rotule siempre los envases fraccionados.',
     '08g': 'Sobreesfuerzos. Levantar cargas pesadas o doblarse al tender camas genera lesiones lumbares. Flexione las piernas, mantenga la espalda recta, acerque la carga al cuerpo y solicite ayuda o carros para pesos mayores a 25 kilos.',
-    '09': 'Recuerde: la prevención no es una regla impuesta, es un hábito diario para regresar a salvo a su hogar. Ante cualquier peligro no controlado en su sector, informe inmediatamente a su superior. La seguridad la hacemos entre todos.',
+    SLOT_09: 'Recuerde: la prevención no es una regla impuesta, es un hábito diario para regresar a salvo a su hogar. Ante cualquier peligro no controlado en su sector, informe inmediatamente a su superior. La seguridad la hacemos entre todos.',
     SLOT_10: 'Muchas gracias por su atención y compromiso con la seguridad. Para más información e instructivos detallados, puede visitar nuestro sitio oficial art prevencion smg punto com punto ar.',
   },
   voiceAudioUrl: null,
@@ -446,7 +468,7 @@ export const mockProjectTutorial02: Project = {
       ],
     },
     {
-      id: '09',
+      id: 'SLOT_09',
       title: 'Tips Finales',
       active: true,
       fields: {
@@ -475,7 +497,7 @@ export const mockProjectTutorial02: Project = {
       placeholderId: 'portada_img',
       type: 'image',
       source: 'upload',
-      url: '/images/portada-placeholder-fire.jpg',
+      url: null,
       fileName: 'default_portada_fire.jpg',
     },
     'media_08a_fire': { id: 'media_08a_fire_default', placeholderId: 'media_08a_fire', type: 'image', source: 'upload', url: null },

@@ -184,9 +184,12 @@ function buildGenericSlide(project: Project, slotId: string, start: number) {
   const font = 'font-family:sans-serif;';
   const title = (slot.fields.title as string) || slot.title;
   const body = (slot.fields.body ?? slot.fields.description ?? slot.fields.objectives) as string | undefined;
-  const imgId = `${slotId.toLowerCase().replace('_', '')}_img`; // e.g. slot_02 → slot02_img... better:
-  const imgUrl = media[`${slotId.toLowerCase()}_img`]?.url ?? media[`objetivos_img`]?.url ?? null;
-  const hasImg = !!imgUrl && slotId === 'SLOT_02';
+  // Map slot ID to its media key
+  const mediaKey = slotId === 'SLOT_01' ? 'portada_img'
+    : slotId === 'SLOT_02' ? 'objetivos_img'
+    : `${slotId.toLowerCase()}_img`; // e.g. SLOT_03B → slot_03b_img
+  const imgUrl = media[mediaKey]?.url ?? null;
+  const hasImg = !!imgUrl && imgUrl.startsWith('http');
 
   clips.push(bgClip(start, colors.background));
 

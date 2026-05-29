@@ -25,6 +25,8 @@ async function getOrCreateFolder(drive: ReturnType<typeof google.drive>, name: s
     q: `name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`,
     fields: 'files(id)',
     spaces: 'drive',
+    includeItemsFromAllDrives: true,
+    supportsAllDrives: true,
   });
 
   if (res.data.files && res.data.files.length > 0) {
@@ -38,6 +40,7 @@ async function getOrCreateFolder(drive: ReturnType<typeof google.drive>, name: s
       parents: [parentId],
     },
     fields: 'id',
+    supportsAllDrives: true,
   });
   return created.data.id!;
 }
@@ -76,6 +79,7 @@ export async function uploadToDrive({
       body: stream,
     },
     fields: 'id',
+    supportsAllDrives: true,
   });
 
   const fileId = uploaded.data.id!;

@@ -1,28 +1,52 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useProjectStore } from '@/lib/store';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { 
-  LayoutDashboard, 
-  Paintbrush, 
-  FileText, 
-  Image as ImageIcon, 
-  Mic, 
-  Video, 
-  CheckCircle2, 
-  AlertCircle, 
-  Clock, 
+import {
+  LayoutDashboard,
+  Paintbrush,
+  FileText,
+  Image as ImageIcon,
+  Mic,
+  Video,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
   ArrowRight,
   Layers,
   FileVideo,
-  Settings
+  Settings,
+  Save,
+  Download,
+  Loader2,
 } from 'lucide-react';
 
 export default function Home() {
   const { project, loadTutorial } = useProjectStore();
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  const handleSaveToNotion = async () => {
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const res = await fetch('/api/notion/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project, estado: 'Borrador' }),
+      });
+      const data = await res.json();
+      setSaveMsg(data.ok ? '✓ Guardado en Notion' : `Error: ${data.error}`);
+    } catch {
+      setSaveMsg('Error al conectar con Notion');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(null), 4000);
+    }
+  };
 
   // Calcular métricas
   const totalSlots = project.slots.length;
@@ -111,6 +135,22 @@ export default function Home() {
           <p className="text-sm text-slate-400 max-w-xl">
             Cargá la identidad de marca, definí el contenido y los medios de apoyo para generar el video del cliente en Shotstack.
           </p>
+        </div>
+
+        {/* Save / Load Notion */}
+        <div className="flex flex-col gap-2">
+          <Button
+            onClick={handleSaveToNotion}
+            disabled={saving}
+            variant="primary"
+            size="sm"
+            icon={saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          >
+            {saving ? 'Guardando…' : 'Guardar en Notion'}
+          </Button>
+          {saveMsg && (
+            <p className="text-[11px] text-center font-semibold text-primary">{saveMsg}</p>
+          )}
         </div>
 
         {/* Template Selector */}
@@ -316,7 +356,10 @@ export default function Home() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 mt-1">Cargar recursos visuales para cada escena activa o generarlos con Gemini/Veo.</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Pegá URLs de Google Drive en cada placeholder.
+                  <span className="text-slate-600"> · Subida automática: pendiente (requiere Workspace o Cloudinary)</span>
+                </p>
                 <div className="mt-3">
                   <Link href="/medios">
                     <Button variant="ghost" size="sm" icon={<ImageIcon className="w-3 h-3" />}>

@@ -1,19 +1,51 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useProjectStore } from '@/lib/store';
 import { AVAILABLE_FONTS } from '@/lib/constants';
+import { NotionClient } from '@/lib/types';
 import ColorPicker from '@/components/ui/ColorPicker';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { Upload, Trash2, ShieldAlert, Sparkles, Loader2 } from 'lucide-react';
+import { Upload, Trash2, ShieldAlert, Sparkles, Loader2, Users, RefreshCw, ExternalLink } from 'lucide-react';
 
 export default function IdentidadVisual() {
-  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry } = useProjectStore();
+  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(project.identity.logoUrl);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  // ── Cargar cliente desde Notion (Notion → Dashboard) ──
+  const [clients, setClients] = useState<NotionClient[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [clientsError, setClientsError] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState('');
+
+  const fetchClients = useCallback(async () => {
+    setLoadingClients(true);
+    setClientsError(null);
+    try {
+      const res = await fetch('/api/notion/clients');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al leer Notion');
+      setClients(data.clients ?? []);
+    } catch (err) {
+      setClientsError(err instanceof Error ? err.message : 'Error al leer Notion');
+    } finally {
+      setLoadingClients(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchClients(); }, [fetchClients]);
+
+  const handleSelectClient = (pageId: string) => {
+    setSelectedClientId(pageId);
+    const client = clients.find(c => c.pageId === pageId);
+    if (!client) return;
+    loadClientIdentity(client);
+    setLogoPreview(client.logoUrl ?? project.identity.logoUrl);
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -68,16 +100,6 @@ export default function IdentidadVisual() {
     });
   };
 
-  const handleApplyDarkTheme = () => {
-    // Paleta premium en modo oscuro
-    updateColors({
-      primary: '#00f2fe',
-      secondary: '#0b1528',
-      accent: '#ff007f',
-      background: '#090d16',
-      text: '#e2e8f0'
-    });
-  };
 
   const colors = project.identity.colors;
   const currentFont = AVAILABLE_FONTS.find(f => f.id === project.identity.fontFamily) || AVAILABLE_FONTS[0];
@@ -102,6 +124,57 @@ export default function IdentidadVisual() {
           </p>
         </div>
       </div>
+
+      {/* Cargar cliente desde Notion */}
+      <Card className="space-y-3 border-primary/20 bg-primary/[0.03]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Cargar Cliente Existente</h2>
+          </div>
+          <button
+            onClick={fetchClients}
+            disabled={loadingClients}
+            className="text-[11px] flex items-center gap-1 text-slate-400 hover:text-primary transition disabled:opacity-50"
+            title="Refrescar lista desde Notion"
+          >
+            <RefreshCw className={`w-3 h-3 ${loadingClients ? 'animate-spin' : ''}`} />
+            Refrescar
+          </button>
+        </div>
+        <p className="text-xs text-slate-400">
+          Elegí un cliente guardado en Notion para autocompletar su identidad visual. No modifica el contenido del tutorial.
+        </p>
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedClientId}
+            onChange={e => handleSelectClient(e.target.value)}
+            disabled={loadingClients || clients.length === 0}
+            className="flex-1 px-3 py-2.5 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors disabled:opacity-50"
+            style={{ colorScheme: 'dark' }}
+          >
+            <option value="" style={{ background: '#020617', color: '#94a3b8' }}>
+              {loadingClients ? 'Cargando clientes…' : clients.length === 0 ? 'No hay clientes en Notion' : '— Seleccionar cliente —'}
+            </option>
+            {(['Plataforma', 'Partner', 'Cliente'] as const).map(grupo => {
+              const items = clients.filter(c => (c.tipo || 'Cliente') === grupo);
+              if (items.length === 0) return null;
+              return (
+                <optgroup key={grupo} label={grupo} style={{ background: '#0f172a', color: '#64748b' }}>
+                  {items.map(c => (
+                    <option key={c.pageId} value={c.pageId} style={{ background: '#020617', color: '#f1f5f9' }}>
+                      {c.clientName}{c.companyName ? ` · ${c.companyName}` : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+          </select>
+        </div>
+        {clientsError && (
+          <p className="text-xs text-rose-400">⚠ {clientsError}</p>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Editor (5 cols) */}
@@ -138,6 +211,23 @@ export default function IdentidadVisual() {
                   ))}
                 </select>
               </div>
+              <Input
+                label="Texto Secundario"
+                placeholder="Ej: Capacitación obligatoria · Sistema de Autoprotección"
+                value={project.identity.secondaryText ?? ''}
+                onChange={e => setSecondaryText(e.target.value)}
+              />
+              {project.identity.assetsFolderUrl && (
+                <a
+                  href={project.identity.assetsFolderUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-xs text-primary hover:underline pt-1"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Abrir carpeta de Assets en Drive
+                </a>
+              )}
             </div>
           </Card>
 
@@ -213,11 +303,11 @@ export default function IdentidadVisual() {
                   SUAMA
                 </button>
                 <button
-                  onClick={handleApplyDarkTheme}
-                  className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2 py-1 rounded font-semibold transition"
-                  title="Aplicar paleta de alto contraste oscura"
+                  disabled
+                  className="text-[10px] bg-slate-900/50 text-slate-600 border border-slate-800 px-2 py-1 rounded font-semibold cursor-not-allowed"
+                  title="Pendiente de assets de Biorisk"
                 >
-                  Neon Dark
+                  Biorisk
                 </button>
               </div>
             </div>

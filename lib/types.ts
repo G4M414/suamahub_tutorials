@@ -10,6 +10,22 @@ export interface ClientIdentity {
   logoUrl: string | null;
   colors: ColorPalette;
   fontFamily: string;
+  secondaryText?: string;    // Texto secundario de marca (slogan / bajada), opcional
+  assetsFolderUrl?: string;  // Link a la carpeta Assets del cliente en Drive
+}
+
+// Identidad de un cliente leída desde Notion (Notion → Dashboard)
+export interface NotionClient {
+  pageId: string;
+  clientName: string;
+  companyName: string;
+  industry: string;
+  tipo: string; // 'Plataforma' | 'Partner' | 'Cliente' (etiqueta, no cambia el flujo)
+  logoUrl: string | null;
+  assetsFolderUrl: string | null;
+  fontFamily: string;
+  secondaryText: string;
+  colors: Partial<ColorPalette>;
 }
 
 export interface SlotField {

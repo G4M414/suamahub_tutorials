@@ -40,7 +40,9 @@ interface VoiceItem {
 }
 
 export default function VozEnOff() {
-  const { project, updateVoiceScript, setVoiceAudioUrl } = useProjectStore();
+  const { project, updateVoiceScript, setVoiceAudioUrl, fillMissingScripts } = useProjectStore();
+
+  React.useEffect(() => { fillMissingScripts(); }, []);
 
   const [selectedSlotId, setSelectedSlotId] = useState<string>(() => {
     const firstActive = project.slots.find(s => s.active);

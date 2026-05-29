@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Harabara";
+  src: url("/fonts/Harabara.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kiona";
+  src: url("/fonts/Kiona-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kiona";
+  src: url("/fonts/Kiona-Italic.ttf") format("truetype");
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
 @theme {
   --color-primary: #00998b;
   --color-secondary: #025268;
@@ -9,8 +33,8 @@
   --color-dark-card: rgba(22, 30, 49, 0.6);
   --color-dark-border: rgba(255, 255, 255, 0.08);
   
-  --font-harabara: "Exo 2", "Geist Sans", sans-serif;
-  --font-kiona: "Poppins", "Geist Sans", sans-serif;
+  --font-harabara: "Harabara", sans-serif;
+  --font-kiona: "Kiona", sans-serif;
   --font-inter: var(--font-geist-sans);
 }
 

@@ -18,6 +18,19 @@ import {
   Link,
 } from 'lucide-react';
 
+// Convierte cualquier URL de Drive a formato embeddable para <img> preview
+function drivePreviewUrl(url: string): string {
+  if (!url || url.startsWith('blob:') || url.startsWith('/') || !url.includes('drive.google')) return url;
+  const matchUc = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  const matchView = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const fileId = matchUc?.[1] ?? matchView?.[1];
+  if (fileId) {
+    // Proxy server-side — evita CORS y problemas de cookies de Google
+    return `/api/drive/proxy?id=${fileId}`;
+  }
+  return url;
+}
+
 // Mapa de imágenes mock realistas de Unsplash según el tipo de riesgo/diapositiva
 const MOCK_ASSETS_MAP: Record<string, { type: 'image' | 'video'; url: string; prompt: string }> = {
   // Tutorial 01 (Riesgos)
@@ -103,8 +116,9 @@ export default function ImagenesyVideos() {
   // Obtener placeholders requeridos dinámicamente según slots activos
   const requiredPlaceholders: { id: string; name: string; type: 'image' | 'video' }[] = [];
 
-  const isSlot01Active = project.slots.find(s => s.id === 'SLOT_01')?.active;
-  const isSlot02Active = project.slots.find(s => s.id === 'SLOT_02')?.active;
+  const isSlot01Active  = project.slots.find(s => s.id === 'SLOT_01')?.active;
+  const isSlot02Active  = project.slots.find(s => s.id === 'SLOT_02')?.active;
+  const isSlot03BActive = project.slots.find(s => s.id === 'SLOT_03B')?.active;
   const slot08 = project.slots.find(s => s.id === 'SLOT_08');
   const activeRiskModules = slot08?.active ? (slot08.riskModules?.filter(rm => rm.active) || []) : [];
 
@@ -113,6 +127,9 @@ export default function ImagenesyVideos() {
   }
   if (isSlot02Active) {
     requiredPlaceholders.push({ id: 'objetivos_img', name: 'Imagen de Objetivos', type: 'image' });
+  }
+  if (isSlot03BActive) {
+    requiredPlaceholders.push({ id: 'slot_03b_img', name: 'Obligaciones y Derechos (imagen)', type: 'image' });
   }
   
   activeRiskModules.forEach(rm => {
@@ -213,6 +230,7 @@ export default function ImagenesyVideos() {
           clientName: project.clientName || 'Sin nombre',
           placeholderId: selectedPlaceholder,
           aspectRatio: getAspectRatio(selectedPlaceholder),
+          model: aiModel,
         }),
       });
 
@@ -313,7 +331,7 @@ export default function ImagenesyVideos() {
                         <div className="w-8 h-8 rounded bg-slate-950/60 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
                           {hasAsset ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={itemMedia.url!} alt="Mini preview" className="w-full h-full object-cover" />
+                            <img src={drivePreviewUrl(itemMedia.url!)} alt="Mini preview" className="w-full h-full object-cover" />
                           ) : ph.type === 'video' ? (
                             <VideoIcon className="w-4 h-4 text-slate-500" />
                           ) : (
@@ -392,10 +410,10 @@ export default function ImagenesyVideos() {
                         </div>
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img 
-                          src={currentMediaState.url} 
-                          alt="Asset preview" 
-                          className="w-full h-full object-cover" 
+                        <img
+                          src={drivePreviewUrl(currentMediaState.url)}
+                          alt="Asset preview"
+                          className="w-full h-full object-cover"
                         />
                       )}
                       
@@ -478,45 +496,29 @@ export default function ImagenesyVideos() {
                     </div>
                   )}
 
-                  {/* Tab: Upload local — sube automáticamente a Google Drive */}
+                  {/* Tab: Upload local — PENDIENTE */}
                   {activeTab === 'upload' && (
                     <div className="space-y-4">
-                      <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-slate-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                        <span>
-                          El archivo se <strong className="text-white">sube automáticamente a Google Drive</strong> y queda como URL pública accesible por Shotstack. No necesitás hacer nada más.
-                        </span>
-                      </div>
-                      <div
-                        className={`border border-dashed rounded-xl p-6 text-center transition ${isUploading ? 'border-primary/40 bg-primary/5' : 'border-slate-800 hover:border-slate-700/80 cursor-pointer'}`}
-                        onClick={() => !isUploading && fileInputRef.current?.click()}
-                      >
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleFileUpload}
-                          accept={selectedItemInfo.type === 'video' ? 'video/*' : 'image/*'}
-                          className="hidden"
-                        />
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
-                            <p className="text-xs font-semibold text-white">Subiendo a Google Drive…</p>
-                            <p className="text-[10px] text-slate-500 mt-1">Se guardará en CLIENTES/{project.clientName || 'Sin nombre'}/</p>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-                            <p className="text-xs font-semibold text-slate-300">Arrastrá tu archivo o hacé clic para buscar</p>
-                            <p className="text-[10px] text-slate-500 mt-1">Se sube a Drive automáticamente · Aspect ratio: <strong>{getAspectLabel(selectedPlaceholder)}</strong></p>
-                          </>
-                        )}
-                      </div>
-                      {currentMediaState.fileName && !isUploading && (
-                        <div className="text-xs text-slate-400 bg-slate-950/20 px-3 py-1.5 rounded-lg border border-slate-900/60 truncate">
-                          Guardado en Drive: <span className="font-mono text-white">{currentMediaState.fileName}</span>
+                      <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                        <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                          <Upload className="w-4 h-4 text-slate-400" />
                         </div>
-                      )}
+                        <div className="space-y-1.5">
+                          <p className="text-sm font-bold text-slate-300">Subida automática — Próximamente</p>
+                          <p className="text-xs text-slate-500 leading-relaxed">
+                            Esta función requiere <strong className="text-slate-400">Google Workspace</strong> (Unidades Compartidas) o integración con <strong className="text-slate-400">Cloudinary</strong> para almacenar archivos con URL pública accesible por Shotstack.
+                          </p>
+                          <div className="pt-2 border-t border-slate-700/50 space-y-1">
+                            <p className="text-[11px] font-semibold text-slate-400">Mientras tanto, usá este flujo:</p>
+                            <ol className="text-[11px] text-slate-500 space-y-1 list-decimal list-inside">
+                              <li>Subí el archivo a tu Google Drive manualmente</li>
+                              <li>Clic derecho → &quot;Obtener enlace&quot; → &quot;Cualquiera con el enlace&quot;</li>
+                              <li>Cambiá <code className="bg-slate-800 px-1 rounded">/file/d/ID/view</code> por <code className="bg-slate-800 px-1 rounded">/uc?id=ID</code></li>
+                              <li>Pegá esa URL en la pestaña <strong className="text-primary">URL de Drive ★</strong></li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -546,13 +548,13 @@ export default function ImagenesyVideos() {
                           >
                             {selectedItemInfo.type === 'video' ? (
                               <>
-                                <option value="veo">Google Veo 3.1 (Video)</option>
-                                <option value="kling">Kling 3.0 (Video)</option>
+                                <option value="veo">Google Veo 3.1 — Gemini</option>
+                                <option value="kling">Kling 3.0</option>
                               </>
                             ) : (
                               <>
-                                <option value="imagen2">Gemini Imagen 2.0 (Foto)</option>
-                                <option value="nanobanana">Nano Banana 2.0 (Ilustración)</option>
+                                <option value="nanobanana">Nano Banana 2 — Gemini</option>
+                                <option value="gpt-image">GPT Image 2.0 — OpenAI</option>
                               </>
                             )}
                           </select>

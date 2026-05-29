@@ -9,7 +9,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', label, error, icon, type = 'text', ...props }, ref) => {
+  ({ className = '', label, error, icon, type = 'text', value, ...props }, ref) => {
     return (
       <div className="w-full space-y-1.5 font-sans">
         {label && <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</label>}
@@ -18,6 +18,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             ref={ref}
+            value={value ?? ''}
             className={`w-full bg-slate-950/40 border ${
               error ? 'border-rose-500 focus:ring-rose-500/30' : 'border-slate-800 focus:border-primary/50 focus:ring-primary/20'
             } text-slate-100 placeholder-slate-500 text-sm rounded-lg py-2 ${

@@ -20,6 +20,7 @@ export const SLOT_INFO = {
   SLOT_01: { name: 'Portada', description: 'Presentación del tutorial y logo del cliente' },
   SLOT_02: { name: 'Objetivos', description: 'Objetivos y temario del curso' },
   SLOT_03: { name: 'Marco Legal', description: 'Leyes y normativas vigentes aplicables' },
+  SLOT_03B: { name: 'Obligaciones, Deberes y Derechos', description: 'Derechos y obligaciones de trabajadores y empleadores' },
   SLOT_04: { name: 'Definiciones Clave', description: 'Glosario de conceptos de prevención' },
   SLOT_05: { name: 'Razones para la Prevención', description: 'Motivaciones morales, legales y económicas' },
   SLOT_06: { name: 'Principios Clave', description: 'Principios de prevención y responsabilidades' },

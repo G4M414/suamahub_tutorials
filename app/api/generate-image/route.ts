@@ -5,7 +5,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, clientName, placeholderId, aspectRatio } = await req.json();
+    const { prompt, clientName, placeholderId, aspectRatio, model } = await req.json();
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt requerido' }, { status: 400 });
@@ -15,8 +15,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GEMINI_API_KEY no configurada' }, { status: 500 });
     }
 
-    // Call Gemini Imagen 3 API
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GEMINI_API_KEY}`;
+    // Nano Banana 2 = imagen-3.0-generate-001, GPT Image usa OpenAI (pendiente)
+    const geminiModel = model === 'nanobanana' || !model
+      ? 'imagen-3.0-generate-001'
+      : 'imagen-3.0-generate-001'; // GPT Image 2.0 pendiente implementación OpenAI
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:predict?key=${GEMINI_API_KEY}`;
 
     const geminiRes = await fetch(apiUrl, {
       method: 'POST',
