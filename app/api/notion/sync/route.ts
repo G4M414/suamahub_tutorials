@@ -277,6 +277,7 @@ async function upsertAssetRow(
   estado: string,
   tipo: string,
   contenido: string = '',
+  audioUrl: string = '',
 ): Promise<void> {
   const properties: Record<string, unknown> = {
     'Nombre del proyecto': { title: [{ text: { content: `${clientName} — ${moduleName}` } }] },
@@ -289,6 +290,7 @@ async function upsertAssetRow(
     'Fecha de generación': { date: { start: new Date().toISOString().split('T')[0] } },
   };
   if (driveUrl) properties['Link Drive'] = { url: driveUrl };
+  if (audioUrl) properties['Audio (Drive URL)'] = { url: audioUrl };
   if (contenido) properties['Contenido'] = { rich_text: [{ text: { content: contenido } }] };
 
   const existingId = await findAssetRow(clientId, tutorialLabel, moduleName);
@@ -369,12 +371,13 @@ async function upsertProyectos(
     const mediaItem = mediaId ? project.media[mediaId] : null;
     const driveUrl = mediaItem?.url?.startsWith('http') ? mediaItem.url : null;
     const contenido = extractSlotText(project, slot.id);
+    const audioUrl = project.voiceAudioUrls?.[slot.id] ?? '';
 
-    if (!driveUrl && !contenido) continue; // nada que guardar
+    if (!driveUrl && !contenido && !audioUrl) continue; // nada que guardar
 
     await upsertAssetRow(
       clientId, clientName, project.projectName, tutorialLabel,
-      moduleName, driveUrl ?? '', estado, tipo, contenido,
+      moduleName, driveUrl ?? '', estado, tipo, contenido, audioUrl,
     );
   }
 
@@ -384,19 +387,12 @@ async function upsertProyectos(
       const mediaItem = project.media[rm.mediaId];
       const driveUrl = mediaItem?.url?.startsWith('http') ? mediaItem.url : null;
       const contenido = extractRiskText(rm, project.voiceScript);
-      if (!driveUrl && !contenido) continue;
+      const audioUrl = project.voiceAudioUrls?.[rm.id] ?? '';
+      if (!driveUrl && !contenido && !audioUrl) continue;
       await upsertAssetRow(
         clientId, clientName, project.projectName, tutorialLabel,
-        rm.name, driveUrl ?? '', estado, tipo, contenido,
+        rm.name, driveUrl ?? '', estado, tipo, contenido, audioUrl,
       );
-    }
-  }
-
-  // ── Audio ──
-  for (const [slotId, url] of Object.entries(project.voiceAudioUrls ?? {})) {
-    if (url?.startsWith('http')) {
-      await upsertAssetRow(clientId, clientName, project.projectName, tutorialLabel,
-        `Audio ${slotId}`, url, estado, tipo, '');
     }
   }
 
