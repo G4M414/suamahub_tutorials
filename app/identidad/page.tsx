@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useProjectStore } from '@/lib/store';
 import { AVAILABLE_FONTS, DEFAULT_BRANDS } from '@/lib/constants';
-import { NotionClient } from '@/lib/types';
+import { NotionClient, Project } from '@/lib/types';
 import ColorPicker from '@/components/ui/ColorPicker';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -11,7 +11,7 @@ import Input from '@/components/ui/Input';
 import { Upload, Trash2, ShieldAlert, Sparkles, Loader2, Users, RefreshCw, ExternalLink } from 'lucide-react';
 
 export default function IdentidadVisual() {
-  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity } = useProjectStore();
+  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity, loadProjectState } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(project.identity.logoUrl);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -20,6 +20,7 @@ export default function IdentidadVisual() {
   const [clients, setClients] = useState<NotionClient[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [clientsError, setClientsError] = useState<string | null>(null);
+  const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState('');
 
   const fetchClients = useCallback(async () => {
@@ -49,12 +50,33 @@ export default function IdentidadVisual() {
     return [...DEFAULT_BRANDS, ...notionExtra];
   }, [clients]);
 
-  const handleSelectClient = (pageId: string) => {
+  const handleSelectClient = async (pageId: string) => {
     setSelectedClientId(pageId);
+    setRestoreMsg(null);
     const client = selectableClients.find(c => c.pageId === pageId);
     if (!client) return;
+    // 1) Identidad visual (logo, colores, tipografía)
     loadClientIdentity(client);
     setLogoPreview(client.logoUrl ?? project.identity.logoUrl);
+    // 2) Notion como BBDD: restaura automáticamente el último proyecto guardado
+    //    de este cliente (imágenes, voz, textos, slots) si existe.
+    try {
+      const res = await fetch('/api/notion/load-project');
+      const data = await res.json();
+      const projects = (data.projects ?? []) as Array<{ projectState: Partial<Project> | null }>;
+      const target = client.clientName.trim().toLowerCase();
+      const match = projects.find(p =>
+        p.projectState && (p.projectState.clientName || '').trim().toLowerCase() === target
+      );
+      if (match?.projectState) {
+        loadProjectState(match.projectState);
+        if (match.projectState.identity?.logoUrl) setLogoPreview(match.projectState.identity.logoUrl);
+        setRestoreMsg(`✓ Proyecto de ${client.clientName} restaurado desde Notion`);
+        setTimeout(() => setRestoreMsg(null), 5000);
+      }
+    } catch {
+      /* si falla la restauración, queda al menos la identidad cargada */
+    }
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,7 +167,7 @@ export default function IdentidadVisual() {
           </button>
         </div>
         <p className="text-xs text-slate-400">
-          Elegí un cliente guardado en Notion para autocompletar su identidad visual. No modifica el contenido del tutorial.
+          Elegí un cliente guardado en Notion: carga su identidad visual y restaura automáticamente su último proyecto guardado (imágenes, voz y textos) si existe.
         </p>
         <div className="flex items-center gap-3">
           <select
@@ -174,6 +196,9 @@ export default function IdentidadVisual() {
         </div>
         {clientsError && (
           <p className="text-xs text-rose-400">⚠ {clientsError}</p>
+        )}
+        {restoreMsg && (
+          <p className="text-xs text-primary font-semibold">{restoreMsg}</p>
         )}
       </Card>
 
