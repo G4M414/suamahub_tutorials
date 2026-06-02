@@ -56,6 +56,7 @@ export interface Slot {
   active: boolean;
   fields: Record<string, string | string[] | DefinitionItem[]>;
   riskModules?: RiskSubModule[]; // Only populated for SLOT_08
+  mediaId?: string; // optional single-image placeholder (e.g. SLOT_03B → 'slot_03b_img')
 }
 
 export interface MediaItem {
