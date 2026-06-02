@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useProjectStore } from '@/lib/store';
-import { AVAILABLE_FONTS } from '@/lib/constants';
+import { AVAILABLE_FONTS, DEFAULT_BRANDS } from '@/lib/constants';
 import { NotionClient } from '@/lib/types';
 import ColorPicker from '@/components/ui/ColorPicker';
 import Card from '@/components/ui/Card';
@@ -39,9 +39,19 @@ export default function IdentidadVisual() {
 
   useEffect(() => { fetchClients(); }, [fetchClients]);
 
+  // Brands default del sistema (SUAMA, BIORISK) + clientes de Notion.
+  // Mismo comportamiento para todos. Los defaults son autoritativos para su
+  // identidad (assets locales curados): si Notion trae un registro con el mismo
+  // nombre, gana el default (evita logos rotos / datos incompletos en Notion).
+  const selectableClients = useMemo(() => {
+    const defaultNames = new Set(DEFAULT_BRANDS.map(b => b.clientName.trim().toLowerCase()));
+    const notionExtra = clients.filter(c => !defaultNames.has(c.clientName.trim().toLowerCase()));
+    return [...DEFAULT_BRANDS, ...notionExtra];
+  }, [clients]);
+
   const handleSelectClient = (pageId: string) => {
     setSelectedClientId(pageId);
-    const client = clients.find(c => c.pageId === pageId);
+    const client = selectableClients.find(c => c.pageId === pageId);
     if (!client) return;
     loadClientIdentity(client);
     setLogoPreview(client.logoUrl ?? project.identity.logoUrl);
@@ -89,16 +99,7 @@ export default function IdentidadVisual() {
     }
   };
 
-  const handleApplyBrandColors = () => {
-    // Autocompletar con colores recomendados por el sistema según el tipo
-    updateColors({
-      primary: '#00998b',
-      secondary: '#025268',
-      accent: '#c6c19d',
-      background: '#ffffff',
-      text: '#2f2722'
-    });
-  };
+  // Atajos de brand: aplican la identidad COMPLETA del default (igual que el selector).
 
 
   const colors = project.identity.colors;
@@ -108,6 +109,7 @@ export default function IdentidadVisual() {
   const getFontFamilyStyle = () => {
     if (project.identity.fontFamily === 'harabara') return 'font-sans tracking-wide font-extrabold';
     if (project.identity.fontFamily === 'kiona') return 'font-mono uppercase font-light tracking-widest';
+    if (project.identity.fontFamily === 'lato') return 'font-sans font-bold tracking-tight';
     if (project.identity.fontFamily === 'roboto') return 'font-sans font-normal';
     if (project.identity.fontFamily === 'outfit') return 'font-sans font-semibold';
     return 'font-sans';
@@ -149,15 +151,14 @@ export default function IdentidadVisual() {
           <select
             value={selectedClientId}
             onChange={e => handleSelectClient(e.target.value)}
-            disabled={loadingClients || clients.length === 0}
             className="flex-1 px-3 py-2.5 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors disabled:opacity-50"
             style={{ colorScheme: 'dark' }}
           >
             <option value="" style={{ background: '#020617', color: '#94a3b8' }}>
-              {loadingClients ? 'Cargando clientes…' : clients.length === 0 ? 'No hay clientes en Notion' : '— Seleccionar cliente —'}
+              {loadingClients ? 'Cargando clientes…' : '— Seleccionar cliente —'}
             </option>
             {(['Plataforma', 'Partner', 'Cliente'] as const).map(grupo => {
-              const items = clients.filter(c => (c.tipo || 'Cliente') === grupo);
+              const items = selectableClients.filter(c => (c.tipo || 'Cliente') === grupo);
               if (items.length === 0) return null;
               return (
                 <optgroup key={grupo} label={grupo} style={{ background: '#0f172a', color: '#64748b' }}>
@@ -297,16 +298,16 @@ export default function IdentidadVisual() {
               <h2 className="text-sm font-bold text-white uppercase tracking-wider">Paleta de Colores</h2>
               <div className="flex space-x-2">
                 <button
-                  onClick={handleApplyBrandColors}
+                  onClick={() => handleSelectClient('default-suama')}
                   className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2 py-1 rounded font-semibold transition"
-                  title="Aplicar paleta corporativa SUAMA"
+                  title="Aplicar identidad de marca SUAMA"
                 >
                   SUAMA
                 </button>
                 <button
-                  disabled
-                  className="text-[10px] bg-slate-900/50 text-slate-600 border border-slate-800 px-2 py-1 rounded font-semibold cursor-not-allowed"
-                  title="Pendiente de assets de Biorisk"
+                  onClick={() => handleSelectClient('default-biorisk')}
+                  className="text-[10px] bg-[#277f29]/10 hover:bg-[#277f29]/20 text-[#7a9c59] border border-[#277f29]/20 px-2 py-1 rounded font-semibold transition"
+                  title="Aplicar identidad de marca Biorisk"
                 >
                   Biorisk
                 </button>
@@ -389,10 +390,10 @@ export default function IdentidadVisual() {
             >
               {/* Header Corner Logo */}
               <div className="flex justify-between items-start">
-                <div className="w-20 h-10 flex items-center">
+                <div className="h-11 md:h-12 flex items-center">
                   {logoPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoPreview} alt="Logo corner" className="max-w-full max-h-full object-contain" />
+                    <img src={logoPreview} alt="Logo corner" className="h-full w-auto max-w-[240px] object-contain object-left" />
                   ) : (
                     <div className="flex items-center space-x-1.5 opacity-60">
                       <div className="w-5 h-5 rounded-full" style={{ backgroundColor: colors.primary }} />

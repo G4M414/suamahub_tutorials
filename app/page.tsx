@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useProjectStore } from '@/lib/store';
+import { SUAMA_COLORS } from '@/lib/constants';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import {
@@ -119,7 +120,8 @@ export default function Home() {
     return `${mins}m ${remainingSecs}s`;
   };
 
-  const currentThemeColor = project.identity.colors.primary;
+  // El dashboard (chrome de la app) mantiene SIEMPRE el brand SUAMA, no el del cliente.
+  const currentThemeColor = SUAMA_COLORS.primary;
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">

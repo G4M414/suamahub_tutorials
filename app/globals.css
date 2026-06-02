@@ -24,6 +24,30 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Lato";
+  src: url("/fonts/Lato-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lato";
+  src: url("/fonts/Lato-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lato";
+  src: url("/fonts/Lato-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-primary: #00998b;
   --color-secondary: #025268;
@@ -35,6 +59,7 @@
   
   --font-harabara: "Harabara", sans-serif;
   --font-kiona: "Kiona", sans-serif;
+  --font-lato: "Lato", sans-serif;
   --font-inter: var(--font-geist-sans);
 }
 

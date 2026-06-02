@@ -30,19 +30,15 @@ export default function Sidebar() {
   return (
     <aside className="w-64 h-screen fixed left-0 top-0 glass-panel border-r border-slate-800 flex flex-col justify-between z-30">
       <div>
-        {/* Logo Section */}
+        {/* Logo Section — branding fijo de la plataforma SUAMA Hub (no cambia con el cliente) */}
         <div className="p-6 border-b border-slate-800 flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-lg overflow-hidden bg-primary/20 flex items-center justify-center border border-primary/30">
-            {project.identity.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img 
-                src={project.identity.logoUrl} 
-                alt="SUAMA Logo" 
-                className="w-full h-full object-cover" 
-              />
-            ) : (
-              <span className="text-primary font-bold text-lg">S</span>
-            )}
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-primary/20 flex items-center justify-center border border-primary/30 shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-suama.jpg"
+              alt="SUAMA Hub"
+              className="w-full h-full object-contain p-0.5"
+            />
           </div>
           <div>
             <h1 className="font-bold text-lg text-white leading-tight">SUAMA Hub</h1>

@@ -1,4 +1,4 @@
-import { ColorPalette } from './types';
+import { ColorPalette, NotionClient } from './types';
 
 export const SUAMA_COLORS: ColorPalette = {
   primary: '#00998b',    // Focoltone 2279 (Teal)
@@ -8,10 +8,49 @@ export const SUAMA_COLORS: ColorPalette = {
   text: '#2f2722',       // Focoltone 6033 (Oscuro / Text)
 };
 
+export const BIORISK_COLORS: ColorPalette = {
+  primary: '#277f29',    // Verde Biorisk (BIO + botones CTA)
+  secondary: '#446084',  // Azul acero (--primary-color del sitio)
+  accent: '#7a9c59',     // Verde oliva (secciones SGC)
+  background: '#ffffff', // Fondo para slides (blanco)
+  text: '#282828',       // Near-black
+};
+
+// Brands default del sistema. Aparecen siempre en el selector de clientes,
+// con el MISMO comportamiento que cualquier cliente creado en Notion.
+// Al seleccionarlos, loadClientIdentity() carga su identidad en el previsualizador.
+export const DEFAULT_BRANDS: NotionClient[] = [
+  {
+    pageId: 'default-suama',
+    clientName: 'SUAMA',
+    companyName: '',
+    industry: '',
+    tipo: 'Plataforma',
+    logoUrl: '/logo-suama.jpg',
+    assetsFolderUrl: null,
+    fontFamily: 'harabara',
+    secondaryText: '',
+    colors: { ...SUAMA_COLORS },
+  },
+  {
+    pageId: 'default-biorisk',
+    clientName: 'BIORISK',
+    companyName: '',
+    industry: '',
+    tipo: 'Partner',
+    logoUrl: '/logo-biorisk.png',
+    assetsFolderUrl: null,
+    fontFamily: 'lato',
+    secondaryText: 'Soluciones Integrales en Seguridad',
+    colors: { ...BIORISK_COLORS },
+  },
+];
+
 export const AVAILABLE_FONTS = [
   { id: 'inter', name: 'Inter (Sans-serif)', value: 'var(--font-inter)' },
   { id: 'harabara', name: 'Harabara (Títulos - SUAMA)', value: 'var(--font-harabara)' },
   { id: 'kiona', name: 'Kiona (Subtítulos - SUAMA)', value: 'var(--font-kiona)' },
+  { id: 'lato', name: 'Lato (Biorisk)', value: 'var(--font-lato)' },
   { id: 'roboto', name: 'Roboto', value: 'var(--font-roboto)' },
   { id: 'outfit', name: 'Outfit', value: 'var(--font-outfit)' },
 ];
