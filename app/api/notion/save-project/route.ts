@@ -13,6 +13,20 @@ const headers = {
   'Notion-Version': '2022-06-28',
 };
 
+// Notion limita cada bloque de texto a 2000 chars, pero permite hasta 100
+// bloques por propiedad rich_text (≈200.000 chars). Partimos el JSON en bloques
+// para no perder el estado (URLs de imágenes, voz, audio, slots).
+const NOTION_RICH_TEXT_BLOCK = 2000;
+const NOTION_RICH_TEXT_MAX_BLOCKS = 100;
+
+function chunkRichText(s: string): Array<{ text: { content: string } }> {
+  const chunks: Array<{ text: { content: string } }> = [];
+  for (let i = 0; i < s.length && chunks.length < NOTION_RICH_TEXT_MAX_BLOCKS; i += NOTION_RICH_TEXT_BLOCK) {
+    chunks.push({ text: { content: s.slice(i, i + NOTION_RICH_TEXT_BLOCK) } });
+  }
+  return chunks;
+}
+
 async function findOrCreateClient(project: Project): Promise<string> {
   const nombre = project.clientName || 'Sin nombre';
 
@@ -68,7 +82,7 @@ export async function POST(req: NextRequest) {
     const clientId = await findOrCreateClient(project);
     const existingId = await findExistingProject(clientId, tutorialLabel);
 
-    // Serialize full project state (media URLs, voice scripts, etc.)
+    // Serializa el estado completo (media URLs, voice scripts, etc.)
     const projectJson = JSON.stringify({
       media: project.media,
       voiceScript: project.voiceScript,
@@ -87,7 +101,7 @@ export async function POST(req: NextRequest) {
       'Tutorial': { select: { name: tutorialLabel } },
       'Estado': { select: { name: 'Borrador' } },
       'Fecha de generación': { date: { start: new Date().toISOString().split('T')[0] } },
-      'Estado del Proyecto (JSON)': { rich_text: [{ text: { content: projectJson.slice(0, 2000) } }] },
+      'Estado del Proyecto (JSON)': { rich_text: chunkRichText(projectJson) },
     };
 
     if (existingId) {

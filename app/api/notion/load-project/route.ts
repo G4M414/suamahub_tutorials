@@ -42,7 +42,10 @@ export async function GET(req: NextRequest) {
 
     const projects = (data.results ?? []).map((page: Record<string, unknown>) => {
       const props = page.properties as Record<string, Record<string, unknown>>;
-      const jsonText = (props['Estado del Proyecto (JSON)']?.rich_text as Array<{plain_text: string}>)?.[0]?.plain_text ?? null;
+      // El estado se guarda partido en varios bloques rich_text (límite de 2000
+      // chars c/u). Concatenamos TODOS en orden antes de parsear.
+      const jsonText = (props['Estado del Proyecto (JSON)']?.rich_text as Array<{plain_text: string}>)
+        ?.map(t => t.plain_text).join('') || null;
       let projectState = null;
       if (jsonText) {
         try { projectState = JSON.parse(jsonText); } catch { /* invalid json */ }
