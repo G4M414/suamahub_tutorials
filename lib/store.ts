@@ -19,7 +19,12 @@ interface ProjectStore {
   setSecondaryText: (text: string) => void;
   loadClientIdentity: (client: NotionClient) => void;
   loadProjectState: (state: Partial<Project>) => void;
-  applyNotionAssets: (assets: Record<string, { linkDrive: string | null; audioUrl: string | null }>) => void;
+  applyNotionAssets: (assets: Record<string, {
+    linkDrive: string | null;
+    audioUrl: string | null;
+    voiceScript?: string | null;
+    slotFields?: Record<string, unknown> | null;
+  }>) => void;
   clearClientAssets: () => void;
   
   // Slots
@@ -155,6 +160,7 @@ export const useProjectStore = create<ProjectStore>()(
         set((state) => {
           const media = { ...state.project.media };
           const voiceAudioUrls = { ...state.project.voiceAudioUrls };
+          const voiceScript = { ...state.project.voiceScript };
 
           const setMedia = (placeholderId: string, url: string) => {
             const existing = media[placeholderId];
@@ -163,26 +169,44 @@ export const useProjectStore = create<ProjectStore>()(
               : { id: `media_${placeholderId}_${Date.now()}`, placeholderId, type: 'image', source: 'upload', url };
           };
 
-          for (const slot of state.project.slots) {
+          const slots = state.project.slots.map(slot => {
             if (slot.id === 'SLOT_08' && slot.riskModules) {
-              for (const rm of slot.riskModules) {
+              const riskModules = slot.riskModules.map(rm => {
                 const a = assets[rm.name];
-                if (!a) continue;
+                if (!a) return rm;
                 if (a.linkDrive) setMedia(rm.mediaId, a.linkDrive);
                 if (a.audioUrl) voiceAudioUrls[rm.id] = a.audioUrl;
-              }
+                if (a.voiceScript) voiceScript[rm.id] = a.voiceScript;
+                // Restaurar causes y measures si los guardamos como JSON
+                if (a.slotFields) {
+                  const f = a.slotFields as { causes?: string[]; measures?: string[] };
+                  return {
+                    ...rm,
+                    ...(Array.isArray(f.causes)   ? { causes:   f.causes   } : {}),
+                    ...(Array.isArray(f.measures)  ? { measures: f.measures } : {}),
+                  };
+                }
+                return rm;
+              });
+              return { ...slot, riskModules };
             } else {
               const a = assets[slot.title];
-              if (!a) continue;
+              if (!a) return slot;
               const mediaId = slot.id === 'SLOT_01' ? 'portada_img'
                             : slot.id === 'SLOT_02' ? 'objetivos_img'
                             : slot.mediaId ?? null;
               if (mediaId && a.linkDrive) setMedia(mediaId, a.linkDrive);
               if (a.audioUrl) voiceAudioUrls[slot.id] = a.audioUrl;
+              if (a.voiceScript) voiceScript[slot.id] = a.voiceScript;
+              // Restaurar campos de texto del slot (objectives, laws, definitions, etc.)
+              if (a.slotFields && typeof a.slotFields === 'object') {
+                return { ...slot, fields: { ...slot.fields, ...(a.slotFields as typeof slot.fields) } };
+              }
+              return slot;
             }
-          }
+          });
 
-          return { project: { ...state.project, media, voiceAudioUrls } };
+          return { project: { ...state.project, slots, media, voiceAudioUrls, voiceScript } };
         }),
 
       // Limpia los assets propios del cliente anterior (imágenes/videos + audios)

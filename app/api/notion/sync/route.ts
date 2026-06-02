@@ -237,49 +237,18 @@ async function upsertCliente(project: Project): Promise<string> {
   return data.id;
 }
 
-// Mapa de mediaId → nombre de módulo para las etiquetas
-const MEDIA_MODULE_NAMES: Record<string, string> = {
-  portada_img:    'Portada',
-  objetivos_img:  'Objetivos',
-  media_08a:      'Resbalones y Caídas',
-  media_08b:      'Cortes y Atrapamientos',
-  media_08c:      'Quemaduras',
-  media_08d:      'Riesgo Eléctrico',
-  media_08e:      'Incendio',
-  media_08f:      'Productos Químicos',
-  media_08g:      'Sobreesfuerzos',
-  media_t2_08a:   'Clases de Fuego',
-  media_t2_08b:   'Tipos de Extintores',
-  media_t2_08c:   'Uso del Extintor',
-};
+// Normaliza el nombre de módulo para emparejar filas de forma robusta,
+// insensible a mayúsculas/espacios. Evita los duplicados por "drift" de casing
+// (p. ej. "Productos químicos" vs "Productos Químicos").
+const normKey = (s: string) => s.trim().toLowerCase();
 
-async function findAssetRow(clientId: string, tutorialLabel: string, moduleName: string): Promise<string | null> {
-  // Busca primero por Módulo tag (más robusto ante datos viejos con Nombre interno incorrecto)
-  const byTag = await nfetch(`${NOTION_BASE}/databases/${PROYECTOS_DB}/query`, {
-    method: 'POST', headers: h,
-    body: JSON.stringify({
-      filter: { and: [
-        { property: 'Cliente', relation: { contains: clientId } },
-        { property: 'Tutorial', select: { equals: tutorialLabel } },
-        { property: 'Módulo', multi_select: { contains: moduleName.replace(/,/g, ' ·') } },
-      ]},
-    }),
-  });
-  const tagResult = (await byTag.json()).results?.[0]?.id ?? null;
-  if (tagResult) return tagResult;
-
-  // Fallback: busca por Nombre interno (para filas sin tag aún)
-  const byName = await nfetch(`${NOTION_BASE}/databases/${PROYECTOS_DB}/query`, {
-    method: 'POST', headers: h,
-    body: JSON.stringify({
-      filter: { and: [
-        { property: 'Cliente', relation: { contains: clientId } },
-        { property: 'Tutorial', select: { equals: tutorialLabel } },
-        { property: 'Nombre interno', rich_text: { equals: moduleName } },
-      ]},
-    }),
-  });
-  return (await byName.json()).results?.[0]?.id ?? null;
+// Lee el "Nombre interno" de una fila; si falta, usa el sufijo del título "{cliente} — {módulo}".
+function rowModuleName(props: Record<string, any>): string {
+  const interno = (props['Nombre interno']?.rich_text ?? []).map((t: any) => t.plain_text).join('').trim();
+  if (interno) return interno;
+  const title = (props['Nombre del proyecto']?.title ?? []).map((t: any) => t.plain_text).join('');
+  const idx = title.indexOf(' — ');
+  return idx >= 0 ? title.slice(idx + 3).trim() : title.trim();
 }
 
 async function archivePage(pageId: string): Promise<void> {
@@ -288,10 +257,75 @@ async function archivePage(pageId: string): Promise<void> {
   });
 }
 
+// Puntaje de completitud de una fila: para elegir qué copia conservar si hay duplicados.
+function rowScore(props: Record<string, any>): number {
+  let s = 0;
+  if (props['Link Drive']?.url) s += 4;
+  if (props['Audio (Drive URL)']?.url) s += 2;
+  if (props['Link MP4 (Drive)']?.url) s += 4;
+  if ((props['Contenido']?.rich_text ?? []).length) s += 1;
+  return s;
+}
+
+// Trae TODAS las filas existentes de este cliente+tutorial en UNA query paginada
+// y devuelve un índice normKey(Nombre interno) → pageId.
+//
+// AUTO-SANACIÓN: si encuentra dos (o más) filas vivas para el mismo módulo
+// (duplicados generados por carreras o por lag de consistencia de la query de
+// Notion), conserva la más completa y ARCHIVA las sobrantes en el acto. Así cada
+// guardado converge la DB a exactamente 1 fila por módulo, sin importar cómo
+// hayan aparecido los duplicados.
+//
+// Reemplaza la búsqueda por-módulo anterior, que filtraba por `Módulo`
+// (multi_select) y, ante un casing distinto, devolvía TODAS las filas del cliente
+// → se pisaba/duplicaba.
+async function indexExistingRows(clientId: string, tutorialLabel: string): Promise<Map<string, string>> {
+  const best = new Map<string, { id: string; score: number }>();
+  const dupsToArchive: string[] = [];
+  let cursor: string | undefined = undefined;
+  do {
+    const res = await nfetch(`${NOTION_BASE}/databases/${PROYECTOS_DB}/query`, {
+      method: 'POST', headers: h,
+      body: JSON.stringify({
+        filter: { and: [
+          { property: 'Cliente', relation: { contains: clientId } },
+          { property: 'Tutorial', select: { equals: tutorialLabel } },
+        ]},
+        page_size: 100,
+        start_cursor: cursor,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Query Proyectos: ${JSON.stringify(data)}`);
+    for (const page of (data.results ?? []) as Array<Record<string, any>>) {
+      const key = normKey(rowModuleName(page.properties));
+      if (!key) continue;
+      const score = rowScore(page.properties);
+      const cur = best.get(key);
+      if (!cur) {
+        best.set(key, { id: page.id, score });
+      } else if (score > cur.score) {
+        dupsToArchive.push(cur.id);            // la previa era peor → archivar
+        best.set(key, { id: page.id, score });
+      } else {
+        dupsToArchive.push(page.id);           // esta es duplicado peor → archivar
+      }
+    }
+    cursor = data.has_more ? data.next_cursor : undefined;
+  } while (cursor);
+
+  // Archivar los duplicados detectados (a la papelera de Notion, recuperables).
+  for (const id of dupsToArchive) await archivePage(id);
+
+  const map = new Map<string, string>();
+  for (const [k, v] of best) map.set(k, v.id);
+  return map;
+}
+
 async function upsertAssetRow(
+  existing: Map<string, string>,
   clientId: string,
   clientName: string,
-  projectName: string,
   tutorialLabel: string,
   moduleName: string,
   driveUrl: string,
@@ -312,9 +346,11 @@ async function upsertAssetRow(
   };
   if (driveUrl) properties['Link Drive'] = { url: driveUrl };
   if (audioUrl) properties['Audio (Drive URL)'] = { url: audioUrl };
-  if (contenido) properties['Contenido'] = { rich_text: [{ text: { content: contenido } }] };
+  // Usar chunkRichText para no truncar: guarda TODO el JSON sin límite de 2000 chars
+  if (contenido) properties['Contenido'] = { rich_text: chunkRichText(contenido) };
 
-  const existingId = await findAssetRow(clientId, tutorialLabel, moduleName);
+  const key = normKey(moduleName);
+  const existingId = existing.get(key);
   if (existingId) {
     const pr = await nfetch(`${NOTION_BASE}/pages/${existingId}`, {
       method: 'PATCH', headers: h, body: JSON.stringify({ properties }),
@@ -328,46 +364,41 @@ async function upsertAssetRow(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`Asset POST ${moduleName}: ${JSON.stringify(data)}`);
+  // Registrar la fila recién creada para no duplicarla dentro de la misma corrida.
+  existing.set(key, data.id);
 }
 
-// Extrae el texto de un slot/módulo como string legible
-function extractSlotText(project: Project, slotId: string): string {
-  const parts: string[] = [];
-
-  if (slotId === 'SLOT_08') return ''; // los risk modules se manejan individualmente
-
-  const slot = project.slots.find(s => s.id === slotId);
-  if (slot?.fields) {
-    for (const [key, val] of Object.entries(slot.fields)) {
-      if (Array.isArray(val) && val.length > 0) {
-        const items = val.map((v: unknown) => {
-          if (typeof v === 'string') return `• ${v}`;
-          if (v && typeof v === 'object' && 'term' in v) {
-            const d = v as { term: string; definition: string };
-            return `• ${d.term}: ${d.definition}`;
-          }
-          return '';
-        }).filter(Boolean);
-        if (items.length) parts.push(`${key}:\n${items.join('\n')}`);
-      } else if (typeof val === 'string' && val.trim()) {
-        parts.push(`${key}: ${val}`);
-      }
-    }
+// Divide un string en bloques de 2000 chars (límite de Notion por bloque rich_text).
+// Soporta hasta 100 bloques → ~200.000 chars. Suficiente para cualquier módulo.
+function chunkRichText(s: string): Array<{ text: { content: string } }> {
+  const chunks: Array<{ text: { content: string } }> = [];
+  for (let i = 0; i < s.length && chunks.length < 100; i += 2000) {
+    chunks.push({ text: { content: s.slice(i, i + 2000) } });
   }
-
-  const script = project.voiceScript?.[slotId];
-  if (script?.trim()) parts.push(`\nGuion voz:\n${script}`);
-
-  return parts.join('\n').slice(0, 1990);
+  return chunks;
 }
 
-function extractRiskText(rm: RiskSubModule, voiceScript: Record<string, string>): string {
-  const parts: string[] = [];
-  if (rm.causes?.length) parts.push(`Causas:\n${rm.causes.map(c => `• ${c}`).join('\n')}`);
-  if (rm.measures?.length) parts.push(`Medidas:\n${rm.measures.map(m => `• ${m}`).join('\n')}`);
+// Serializa el contenido de un slot como JSON estructurado, sin truncar.
+// Al cargar desde Notion se puede restaurar campo por campo en el store.
+function extractSlotContent(project: Project, slotId: string): string {
+  if (slotId === 'SLOT_08') return '';
+  const slot = project.slots.find(s => s.id === slotId);
+  const payload: Record<string, unknown> = {};
+  if (slot?.fields && Object.keys(slot.fields).length > 0) {
+    payload.fields = slot.fields;
+  }
+  const script = project.voiceScript?.[slotId];
+  if (script?.trim()) payload.voiceScript = script;
+  return Object.keys(payload).length > 0 ? JSON.stringify(payload) : '';
+}
+
+function extractRiskContent(rm: RiskSubModule, voiceScript: Record<string, string>): string {
+  const payload: Record<string, unknown> = {};
+  if (rm.causes?.length) payload.causes = rm.causes;
+  if (rm.measures?.length) payload.measures = rm.measures;
   const script = voiceScript?.[rm.id];
-  if (script?.trim()) parts.push(`\nGuion voz:\n${script}`);
-  return parts.join('\n').slice(0, 1990);
+  if (script?.trim()) payload.voiceScript = script;
+  return Object.keys(payload).length > 0 ? JSON.stringify(payload) : '';
 }
 
 async function upsertProyectos(
@@ -381,6 +412,10 @@ async function upsertProyectos(
     ? 'Personalizado Cliente' : 'SUAMA Template';
   const clientName = project.clientName || 'Cliente';
 
+  // Índice de filas existentes (UNA query) → upsert por Nombre interno sin
+  // duplicar ni pisar otros módulos.
+  const existing = await indexExistingRows(clientId, tutorialLabel);
+
   // ── Slots regulares (no SLOT_08) con media o texto ──
   const slot08 = project.slots.find(s => s.id === 'SLOT_08');
 
@@ -391,18 +426,15 @@ async function upsertProyectos(
                   : null;
     const mediaItem = mediaId ? project.media[mediaId] : null;
     const driveUrl = mediaItem?.url?.startsWith('http') ? mediaItem.url : null;
-    const contenido = extractSlotText(project, slot.id);
+    const contenido = extractSlotContent(project, slot.id);
     const audioUrl = project.voiceAudioUrls?.[slot.id] ?? '';
 
     if (!driveUrl && !contenido && !audioUrl) continue; // nada que guardar
 
     await upsertAssetRow(
-      clientId, clientName, project.projectName, tutorialLabel,
+      existing, clientId, clientName, tutorialLabel,
       moduleName, driveUrl ?? '', estado, tipo, contenido, audioUrl,
     );
-    // Limpiar fila huérfana creada por la versión anterior del código
-    const orphanId = await findAssetRow(clientId, tutorialLabel, `Audio ${slot.id}`);
-    if (orphanId) await archivePage(orphanId);
   }
 
   // ── Módulos de riesgo (SLOT_08) ──
@@ -410,16 +442,13 @@ async function upsertProyectos(
     for (const rm of (slot08.riskModules ?? []).filter(r => r.active)) {
       const mediaItem = project.media[rm.mediaId];
       const driveUrl = mediaItem?.url?.startsWith('http') ? mediaItem.url : null;
-      const contenido = extractRiskText(rm, project.voiceScript);
+      const contenido = extractRiskContent(rm, project.voiceScript);
       const audioUrl = project.voiceAudioUrls?.[rm.id] ?? '';
       if (!driveUrl && !contenido && !audioUrl) continue;
       await upsertAssetRow(
-        clientId, clientName, project.projectName, tutorialLabel,
+        existing, clientId, clientName, tutorialLabel,
         rm.name, driveUrl ?? '', estado, tipo, contenido, audioUrl,
       );
-      // Limpiar fila huérfana creada por la versión anterior del código
-      const orphanId = await findAssetRow(clientId, tutorialLabel, `Audio ${rm.id}`);
-      if (orphanId) await archivePage(orphanId);
     }
   }
 
@@ -435,11 +464,13 @@ async function upsertProyectos(
       'Link MP4 (Drive)':    { url: mp4Url },
       'Fecha de generación': { date: { start: new Date().toISOString().split('T')[0] } },
     };
-    const existingId = await findAssetRow(clientId, tutorialLabel, 'MP4 Final');
+    const existingId = existing.get(normKey('MP4 Final'));
     if (existingId) {
       await nfetch(`${NOTION_BASE}/pages/${existingId}`, { method: 'PATCH', headers: h, body: JSON.stringify({ properties }) });
     } else {
-      await nfetch(`${NOTION_BASE}/pages`, { method: 'POST', headers: h, body: JSON.stringify({ parent: { database_id: PROYECTOS_DB }, properties }) });
+      const r = await nfetch(`${NOTION_BASE}/pages`, { method: 'POST', headers: h, body: JSON.stringify({ parent: { database_id: PROYECTOS_DB }, properties }) });
+      const d = await r.json();
+      if (r.ok && d.id) existing.set(normKey('MP4 Final'), d.id);
     }
   }
 }

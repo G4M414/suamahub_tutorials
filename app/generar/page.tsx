@@ -94,18 +94,12 @@ export default function GenerarMP4() {
           const tutorialName = project.tutorialId === 'tutorial_01'
             ? 'Tutorial 01 — Riesgos Hoteles'
             : 'Tutorial 02 — Incendios';
-          // 1) Página legible en Notion (assets como links + link al MP4)
+          // Sync con Notion: upsert por módulo (Link Drive + Audio) + link al MP4.
           fetch('/api/notion/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ project, mp4Url: data.url, tutorialName }),
           }).catch(err => console.error('Notion sync error:', err));
-          // 2) Estado completo restaurable (Notion como BBDD) — auto-guardado
-          fetch('/api/notion/save-project', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ project }),
-          }).catch(err => console.error('Notion save-project error:', err));
         } else if (data.status === 'failed') {
           clearInterval(pollRef.current!);
           setJob(prev => ({ ...prev, step: 'error', errorMsg: data.error ?? 'Render fallido en Shotstack.' }));
