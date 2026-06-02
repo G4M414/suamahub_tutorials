@@ -11,7 +11,7 @@ import Input from '@/components/ui/Input';
 import { Upload, Trash2, ShieldAlert, Sparkles, Loader2, Users, RefreshCw, ExternalLink } from 'lucide-react';
 
 export default function IdentidadVisual() {
-  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity, loadProjectState, applyNotionAssets } = useProjectStore();
+  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity, loadProjectState, applyNotionAssets, clearClientAssets } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(project.identity.logoUrl);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -50,11 +50,27 @@ export default function IdentidadVisual() {
     return [...DEFAULT_BRANDS, ...notionExtra];
   }, [clients]);
 
+  // El <select> usa estado local, que se pierde al navegar entre secciones.
+  // Re-derivamos la selección desde el cliente cargado en el proyecto, así el
+  // dropdown sigue mostrando al cliente activo al volver a esta pantalla.
+  useEffect(() => {
+    if (selectedClientId) return;
+    const target = project.clientName.trim().toLowerCase();
+    if (!target) return;
+    const match = selectableClients.find(c => c.clientName.trim().toLowerCase() === target);
+    if (match) setSelectedClientId(match.pageId);
+  }, [selectableClients, project.clientName, selectedClientId]);
+
   const handleSelectClient = async (pageId: string) => {
     setSelectedClientId(pageId);
     setRestoreMsg(null);
     const client = selectableClients.find(c => c.pageId === pageId);
     if (!client) return;
+    // 0) Limpiar los assets del cliente anterior (imágenes/videos + audio).
+    //    Si este cliente no tiene proyecto guardado ni links en Notion, queda
+    //    vacío en vez de heredar los medios del cliente previo. Los pasos 2 y 3
+    //    repueblan lo que SÍ exista para este cliente.
+    clearClientAssets();
     // 1) Identidad visual (logo, colores, tipografía)
     loadClientIdentity(client);
     setLogoPreview(client.logoUrl ?? project.identity.logoUrl);

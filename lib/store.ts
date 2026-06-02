@@ -20,6 +20,7 @@ interface ProjectStore {
   loadClientIdentity: (client: NotionClient) => void;
   loadProjectState: (state: Partial<Project>) => void;
   applyNotionAssets: (assets: Record<string, { linkDrive: string | null; audioUrl: string | null }>) => void;
+  clearClientAssets: () => void;
   
   // Slots
   toggleSlot: (slotId: string, active: boolean) => void;
@@ -182,6 +183,19 @@ export const useProjectStore = create<ProjectStore>()(
           }
 
           return { project: { ...state.project, media, voiceAudioUrls } };
+        }),
+
+      // Limpia los assets propios del cliente anterior (imágenes/videos + audios)
+      // dejando el contenido textual y la estructura de slots intactos.
+      // Se llama al cambiar de cliente: así un cliente sin links en Notion queda
+      // efectivamente vacío en vez de heredar los medios del cliente previo.
+      clearClientAssets: () =>
+        set((state) => {
+          const media: Record<string, MediaItem> = {};
+          for (const [key, item] of Object.entries(state.project.media)) {
+            media[key] = { ...item, url: null, generationStatus: 'idle' };
+          }
+          return { project: { ...state.project, media, voiceAudioUrls: {} } };
         }),
 
       toggleSlot: (slotId, active) =>
