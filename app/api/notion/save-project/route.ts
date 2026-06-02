@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
       companyName: project.companyName,
       industry: project.industry,
       projectName: project.projectName,
+      tutorialId: project.tutorialId,
     });
 
     const properties: Record<string, unknown> = {

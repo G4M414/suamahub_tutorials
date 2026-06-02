@@ -18,6 +18,7 @@ interface ProjectStore {
   updateLogo: (logoUrl: string | null) => void;
   setSecondaryText: (text: string) => void;
   loadClientIdentity: (client: NotionClient) => void;
+  loadProjectState: (state: Partial<Project>) => void;
   
   // Slots
   toggleSlot: (slotId: string, active: boolean) => void;
@@ -121,6 +122,25 @@ export const useProjectStore = create<ProjectStore>()(
               secondaryText: client.secondaryText ?? state.project.identity.secondaryText ?? '',
               assetsFolderUrl: client.assetsFolderUrl ?? state.project.identity.assetsFolderUrl,
             },
+          },
+        })),
+
+      // Restaura el estado COMPLETO de un proyecto guardado en Notion
+      // (imágenes, voz, audio, slots, identidad). Reemplaza, no mergea.
+      loadProjectState: (s) =>
+        set((cur) => ({
+          project: {
+            ...cur.project,
+            ...(s.projectName !== undefined ? { projectName: s.projectName } : {}),
+            ...(s.clientName !== undefined ? { clientName: s.clientName } : {}),
+            ...(s.companyName !== undefined ? { companyName: s.companyName } : {}),
+            ...(s.industry !== undefined ? { industry: s.industry } : {}),
+            ...(s.tutorialId !== undefined ? { tutorialId: s.tutorialId } : {}),
+            ...(s.identity ? { identity: s.identity } : {}),
+            ...(s.slots ? { slots: s.slots } : {}),
+            ...(s.media ? { media: s.media } : {}),
+            ...(s.voiceScript ? { voiceScript: s.voiceScript } : {}),
+            ...(s.voiceAudioUrls ? { voiceAudioUrls: s.voiceAudioUrls } : {}),
           },
         })),
 
