@@ -11,7 +11,7 @@ import Input from '@/components/ui/Input';
 import { Upload, Trash2, ShieldAlert, Sparkles, Loader2, Users, RefreshCw, ExternalLink } from 'lucide-react';
 
 export default function IdentidadVisual() {
-  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity, loadProjectState } = useProjectStore();
+  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity, loadProjectState, applyNotionAssets } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(project.identity.logoUrl);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -71,11 +71,24 @@ export default function IdentidadVisual() {
       if (match?.projectState) {
         loadProjectState(match.projectState);
         if (match.projectState.identity?.logoUrl) setLogoPreview(match.projectState.identity.logoUrl);
-        setRestoreMsg(`✓ Proyecto de ${client.clientName} restaurado desde Notion`);
-        setTimeout(() => setRestoreMsg(null), 5000);
       }
     } catch {
-      /* si falla la restauración, queda al menos la identidad cargada */
+      /* si falla la restauración del estado, seguimos con los assets por módulo */
+    }
+    // 3) Assets por módulo: lee las filas de Notion (Link Drive de cada módulo) y
+    //    los mete en los medios/audio de la app. Esto hace que copiar las filas de
+    //    un cliente a otro y elegirlo cargue todos los assets.
+    try {
+      const ar = await fetch(`/api/notion/load-assets?clientName=${encodeURIComponent(client.clientName)}&tutorialId=${project.tutorialId}`);
+      const adata = await ar.json();
+      const count = adata.assets ? Object.keys(adata.assets).length : 0;
+      if (count > 0) {
+        applyNotionAssets(adata.assets);
+        setRestoreMsg(`✓ ${client.clientName}: ${count} módulo(s) con assets cargados desde Notion`);
+        setTimeout(() => setRestoreMsg(null), 6000);
+      }
+    } catch {
+      /* si falla, queda al menos la identidad cargada */
     }
   };
 

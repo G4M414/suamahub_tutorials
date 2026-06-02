@@ -19,6 +19,7 @@ interface ProjectStore {
   setSecondaryText: (text: string) => void;
   loadClientIdentity: (client: NotionClient) => void;
   loadProjectState: (state: Partial<Project>) => void;
+  applyNotionAssets: (assets: Record<string, { linkDrive: string | null; audioUrl: string | null }>) => void;
   
   // Slots
   toggleSlot: (slotId: string, active: boolean) => void;
@@ -143,6 +144,45 @@ export const useProjectStore = create<ProjectStore>()(
             ...(s.voiceAudioUrls ? { voiceAudioUrls: s.voiceAudioUrls } : {}),
           },
         })),
+
+      // Aplica los assets por módulo traídos de Notion (filas con Link Drive).
+      // Mapea moduleName → placeholder/slotId con el MISMO criterio que el sync:
+      //   slots normales: Nombre interno = slot.title; placeholder SLOT_01→portada_img,
+      //   SLOT_02→objetivos_img (o slot.mediaId); audio → voiceAudioUrls[slot.id]
+      //   módulos de riesgo: Nombre interno = rm.name; placeholder = rm.mediaId; audio → rm.id
+      applyNotionAssets: (assets) =>
+        set((state) => {
+          const media = { ...state.project.media };
+          const voiceAudioUrls = { ...state.project.voiceAudioUrls };
+
+          const setMedia = (placeholderId: string, url: string) => {
+            const existing = media[placeholderId];
+            media[placeholderId] = existing
+              ? { ...existing, url }
+              : { id: `media_${placeholderId}_${Date.now()}`, placeholderId, type: 'image', source: 'upload', url };
+          };
+
+          for (const slot of state.project.slots) {
+            if (slot.id === 'SLOT_08' && slot.riskModules) {
+              for (const rm of slot.riskModules) {
+                const a = assets[rm.name];
+                if (!a) continue;
+                if (a.linkDrive) setMedia(rm.mediaId, a.linkDrive);
+                if (a.audioUrl) voiceAudioUrls[rm.id] = a.audioUrl;
+              }
+            } else {
+              const a = assets[slot.title];
+              if (!a) continue;
+              const mediaId = slot.id === 'SLOT_01' ? 'portada_img'
+                            : slot.id === 'SLOT_02' ? 'objetivos_img'
+                            : slot.mediaId ?? null;
+              if (mediaId && a.linkDrive) setMedia(mediaId, a.linkDrive);
+              if (a.audioUrl) voiceAudioUrls[slot.id] = a.audioUrl;
+            }
+          }
+
+          return { project: { ...state.project, media, voiceAudioUrls } };
+        }),
 
       toggleSlot: (slotId, active) =>
         set((state) => ({
