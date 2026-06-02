@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Exo_2, Poppins } from "next/font/google";
 import "./globals.css";
 import ModuleShell from "@/components/layout/ModuleShell";
+import AutoSave from "@/components/AutoSave";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,6 +42,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${exo2.variable} ${poppins.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-[#0b0f19] text-slate-100">
+        <AutoSave />
         <ModuleShell>{children}</ModuleShell>
       </body>
     </html>

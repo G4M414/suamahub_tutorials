@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useProjectStore } from '@/lib/store';
+import { useUiStore } from '@/lib/ui-store';
 import { SUAMA_COLORS } from '@/lib/constants';
-import { Project } from '@/lib/types';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import {
@@ -24,46 +24,28 @@ import {
   Save,
   Download,
   Loader2,
-  X,
 } from 'lucide-react';
 
-type SavedProject = {
-  pageId: string;
-  name: string;
-  tutorial: string;
-  estado: string;
-  fecha: string;
-  projectState: Partial<Project> | null;
-};
-
 export default function Home() {
-  const { project, loadTutorial, loadProjectState } = useProjectStore();
+  const { project, loadTutorial, applyNotionAssets } = useProjectStore();
+  const { dirty, saving: autoSaving, setDirty, setSuppressSave } = useUiStore();
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-
-  // Cargar proyecto de Notion
-  const [showLoad, setShowLoad] = useState(false);
-  const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
-  const [loadingList, setLoadingList] = useState(false);
-  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSaveToNotion = async () => {
     setSaving(true);
     setSaveMsg(null);
     try {
-      // 1) sync → página legible en Notion (assets como links clickeables)
+      // sync → upsert de una fila por módulo (Link Drive + Audio + contenido)
+      // en la DB Proyectos. Notion es la BBDD persistente del proyecto.
       const res = await fetch('/api/notion/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project, estado: 'Borrador' }),
       });
       const data = await res.json();
-      // 2) save-project → estado estructurado restaurable (imágenes + voz + slots)
-      await fetch('/api/notion/save-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project }),
-      });
+      if (data.ok) setDirty(false);
       setSaveMsg(data.ok ? '✓ Guardado en Notion' : `Error: ${data.error}`);
     } catch {
       setSaveMsg('Error al conectar con Notion');
@@ -73,29 +55,39 @@ export default function Home() {
     }
   };
 
-  const openLoadModal = async () => {
-    setShowLoad(true);
-    setLoadingList(true);
-    setLoadErr(null);
+  // Carga rápida: lee las filas por módulo de Notion (Link Drive + Audio) del
+  // cliente+tutorial actuales y las aplica a los medios de la app. Una sola query.
+  const handleLoadFromNotion = async () => {
+    if (!project.clientName?.trim()) {
+      setSaveMsg('Elegí un cliente primero (Identidad Visual)');
+      setTimeout(() => setSaveMsg(null), 4000);
+      return;
+    }
+    setLoading(true);
+    setSaveMsg(null);
+    // Pausar autoguardado: lo que cargamos YA está en Notion, no hay que re-subirlo.
+    setSuppressSave(true);
     try {
-      const res = await fetch('/api/notion/load-project');
+      const res = await fetch(
+        `/api/notion/load-assets?clientName=${encodeURIComponent(project.clientName)}&tutorialId=${project.tutorialId}`,
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al leer Notion');
-      setSavedProjects(data.projects ?? []);
+      const count = data.assets ? Object.keys(data.assets).length : 0;
+      if (count > 0) {
+        applyNotionAssets(data.assets);
+        setSaveMsg(`✓ ${count} módulo(s) cargados desde Notion`);
+      } else {
+        setSaveMsg('No hay assets guardados para este cliente/tutorial');
+      }
     } catch (e) {
-      setLoadErr(e instanceof Error ? e.message : 'Error al leer Notion');
+      setSaveMsg(e instanceof Error ? e.message : 'Error al leer Notion');
     } finally {
-      setLoadingList(false);
+      setLoading(false);
+      setDirty(false);
+      setSuppressSave(false);
+      setTimeout(() => setSaveMsg(null), 5000);
     }
-  };
-
-  const handleLoadProject = (p: SavedProject) => {
-    if (!p.projectState) return;
-    if (!confirm(`¿Cargar "${p.name}"? Se reemplazará el proyecto que tengas cargado ahora (imágenes, voz, textos e identidad).`)) return;
-    loadProjectState(p.projectState);
-    setShowLoad(false);
-    setSaveMsg('✓ Proyecto cargado desde Notion');
-    setTimeout(() => setSaveMsg(null), 4000);
   };
 
   // Calcular métricas
@@ -107,8 +99,14 @@ export default function Home() {
   const slot08 = project.slots.find(s => s.id === 'SLOT_08');
   const activeRiskModules = slot08?.active ? (slot08.riskModules?.filter(rm => rm.active) || []) : [];
 
+  // Mismos placeholders que la pantalla de Medios (Portada + Objetivos +
+  // Obligaciones/SLOT_03B + 1 por riesgo activo), para que el conteo coincida.
+  const isSlot02Active  = project.slots.find(s => s.id === 'SLOT_02')?.active;
+  const isSlot03BActive = project.slots.find(s => s.id === 'SLOT_03B')?.active;
   const requiredMediaIds: string[] = [];
-  if (isSlot01Active) requiredMediaIds.push('portada_img');
+  if (isSlot01Active)  requiredMediaIds.push('portada_img');
+  if (isSlot02Active)  requiredMediaIds.push('objetivos_img');
+  if (isSlot03BActive) requiredMediaIds.push('slot_03b_img');
   activeRiskModules.forEach(rm => requiredMediaIds.push(rm.mediaId));
 
   const totalMediaRequired = requiredMediaIds.length;
@@ -141,6 +139,20 @@ export default function Home() {
   }, 0);
 
   const voicePercent = totalVoiceRequirements > 0 ? Math.round((voiceScriptsFilled / totalVoiceRequirements) * 100) : 100;
+
+  // Audios listos: un audio (voz en off) por cada módulo activo. Los slots de
+  // riesgo (SLOT_08) cuentan por cada submódulo activo; el resto, por slot.
+  const audioRequiredKeys: string[] = [];
+  project.slots.filter(s => s.active).forEach(s => {
+    if (s.id === 'SLOT_08') activeRiskModules.forEach(rm => audioRequiredKeys.push(rm.id));
+    else audioRequiredKeys.push(s.id);
+  });
+  const totalAudioRequired = audioRequiredKeys.length;
+  const totalAudioReady = audioRequiredKeys.filter(k => {
+    const u = project.voiceAudioUrls?.[k];
+    return typeof u === 'string' && u.trim() !== '';
+  }).length;
+  const audioPercent = totalAudioRequired > 0 ? Math.round((totalAudioReady / totalAudioRequired) * 100) : 0;
 
   // Estado general de completitud
   const generalProgress = Math.round(
@@ -200,15 +212,20 @@ export default function Home() {
             {saving ? 'Guardando…' : 'Guardar en Notion'}
           </Button>
           <Button
-            onClick={openLoadModal}
+            onClick={handleLoadFromNotion}
+            disabled={loading}
             variant="ghost"
             size="sm"
-            icon={<Download className="w-3.5 h-3.5" />}
+            icon={loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
           >
-            Cargar de Notion
+            {loading ? 'Cargando…' : 'Cargar de Notion'}
           </Button>
-          {saveMsg && (
+          {saveMsg ? (
             <p className="text-[11px] text-center font-semibold text-primary">{saveMsg}</p>
+          ) : (
+            <p className="text-[11px] text-center font-medium text-slate-500">
+              {autoSaving ? '⟳ Autoguardando…' : dirty ? '● Cambios sin guardar' : '✓ Sincronizado con Notion'}
+            </p>
           )}
         </div>
 
@@ -249,12 +266,12 @@ export default function Home() {
       </div>
 
       {/* Progress Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {/* Progress Ring Card */}
-        <Card className="flex items-center space-x-6">
-          <div className="relative w-20 h-20 shrink-0">
+        <Card className="flex items-center space-x-4">
+          <div className="relative w-16 h-16 shrink-0">
             {/* SVG Progress Circle */}
-            <svg className="w-full h-full transform -rotate-90">
+            <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
               <circle
                 cx="40"
                 cy="40"
@@ -275,13 +292,13 @@ export default function Home() {
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-lg font-bold text-white">{generalProgress}%</span>
+              <span className="text-base font-bold text-white">{generalProgress}%</span>
             </div>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-400">Progreso Total</h3>
-            <p className="text-xl font-bold text-white mt-1">Configuración</p>
-            <span className="text-[11px] text-slate-500 leading-none">Promedio de los 4 módulos</span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Progreso Total</h3>
+            <p className="text-base font-bold text-white mt-1 leading-tight truncate">Configuración</p>
+            <span className="text-[10px] text-slate-500 block truncate">4 módulos</span>
           </div>
         </Card>
 
@@ -303,13 +320,25 @@ export default function Home() {
             <ImageIcon className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Medios Listos</h3>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Imágenes / Videos</h3>
             <p className="text-2xl font-bold text-white mt-1">{totalMediaUploaded} / {totalMediaRequired}</p>
-            <span className="text-[11px] text-amber-400">{mediaPercent}% imágenes/videos cargados</span>
+            <span className="text-[11px] text-amber-400">{mediaPercent}% de los slots con imagen</span>
           </div>
         </Card>
 
-        {/* Stats 4: Estimated Duration */}
+        {/* Stats 4: Audios listos */}
+        <Card className="flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+            <Mic className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Audios Listos</h3>
+            <p className="text-2xl font-bold text-white mt-1">{totalAudioReady} / {totalAudioRequired}</p>
+            <span className="text-[11px] text-rose-400">{audioPercent}% de la voz en off generada</span>
+          </div>
+        </Card>
+
+        {/* Stats 5: Estimated Duration */}
         <Card className="flex items-center space-x-4">
           <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
             <Clock className="w-6 h-6" />
@@ -535,51 +564,6 @@ export default function Home() {
       </div>
 
       {/* Modal: Cargar proyecto de Notion */}
-      {showLoad && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => setShowLoad(false)}
-        >
-          <div
-            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-5 border-b border-slate-800">
-              <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Cargar Proyecto de Notion</h3>
-                <p className="text-xs text-slate-400 mt-1">Restaura imágenes, voz, textos e identidad de un proyecto guardado.</p>
-              </div>
-              <button onClick={() => setShowLoad(false)} className="text-slate-400 hover:text-white transition shrink-0">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-5 overflow-y-auto space-y-2">
-              {loadingList && <p className="text-sm text-slate-400">Cargando proyectos…</p>}
-              {loadErr && <p className="text-sm text-rose-400">⚠ {loadErr}</p>}
-              {!loadingList && !loadErr && savedProjects.length === 0 && (
-                <p className="text-sm text-slate-400">No hay proyectos guardados en Notion todavía.</p>
-              )}
-              {savedProjects.map(p => (
-                <button
-                  key={p.pageId}
-                  onClick={() => handleLoadProject(p)}
-                  disabled={!p.projectState}
-                  className="w-full text-left p-3 rounded-xl border border-slate-800 bg-slate-950/40 hover:border-primary/40 hover:bg-primary/[0.04] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-white truncate">{p.name || 'Sin nombre'}</span>
-                    <span className="text-[10px] text-slate-500 shrink-0">{p.fecha}</span>
-                  </div>
-                  <div className="text-xs text-slate-400 mt-0.5">{p.tutorial}{p.estado ? ` · ${p.estado}` : ''}</div>
-                  {!p.projectState && (
-                    <div className="text-[10px] text-amber-500 mt-1">Sin estado restaurable (guardado antes de esta función)</div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -2,8 +2,9 @@
 
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useProjectStore } from '@/lib/store';
+import { useUiStore } from '@/lib/ui-store';
 import { AVAILABLE_FONTS, DEFAULT_BRANDS } from '@/lib/constants';
-import { NotionClient, Project } from '@/lib/types';
+import { NotionClient } from '@/lib/types';
 import ColorPicker from '@/components/ui/ColorPicker';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -11,7 +12,8 @@ import Input from '@/components/ui/Input';
 import { Upload, Trash2, ShieldAlert, Sparkles, Loader2, Users, RefreshCw, ExternalLink } from 'lucide-react';
 
 export default function IdentidadVisual() {
-  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity, loadProjectState, applyNotionAssets, clearClientAssets } = useProjectStore();
+  const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity, applyNotionAssets, clearClientAssets } = useProjectStore();
+  const { setSuppressSave, setDirty } = useUiStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(project.identity.logoUrl);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -62,39 +64,46 @@ export default function IdentidadVisual() {
   }, [selectableClients, project.clientName, selectedClientId]);
 
   const handleSelectClient = async (pageId: string) => {
-    setSelectedClientId(pageId);
-    setRestoreMsg(null);
     const client = selectableClients.find(c => c.pageId === pageId);
     if (!client) return;
-    // 0) Limpiar los assets del cliente anterior (imágenes/videos + audio).
-    //    Si este cliente no tiene proyecto guardado ni links en Notion, queda
-    //    vacío en vez de heredar los medios del cliente previo. Los pasos 2 y 3
-    //    repueblan lo que SÍ exista para este cliente.
-    clearClientAssets();
-    // 1) Identidad visual (logo, colores, tipografía)
-    loadClientIdentity(client);
-    setLogoPreview(client.logoUrl ?? project.identity.logoUrl);
-    // 2) Notion como BBDD: restaura automáticamente el último proyecto guardado
-    //    de este cliente (imágenes, voz, textos, slots) si existe.
-    try {
-      const res = await fetch('/api/notion/load-project');
-      const data = await res.json();
-      const projects = (data.projects ?? []) as Array<{ projectState: Partial<Project> | null }>;
-      const target = client.clientName.trim().toLowerCase();
-      const match = projects.find(p =>
-        p.projectState && (p.projectState.clientName || '').trim().toLowerCase() === target
+
+    // GUARDIA: si hay cambios sin guardar del cliente actual, avisar antes de
+    // cambiar (no se pierde nada sin tu OK).
+    const current = project.clientName?.trim();
+    if (useUiStore.getState().dirty && current && current !== 'SUAMA Demo Client' && current !== client.clientName) {
+      const save = confirm(
+        `Tenés cambios sin guardar de "${current}".\n\n` +
+        `Aceptar = guardarlos en Notion antes de cambiar.\n` +
+        `Cancelar = cambiar de cliente y descartarlos.`
       );
-      if (match?.projectState) {
-        loadProjectState(match.projectState);
-        if (match.projectState.identity?.logoUrl) setLogoPreview(match.projectState.identity.logoUrl);
+      if (save) {
+        try {
+          await fetch('/api/notion/sync', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project, estado: 'Borrador' }),
+          });
+        } catch { /* si falla el guardado, seguimos igual con el cambio */ }
       }
-    } catch {
-      /* si falla la restauración del estado, seguimos con los assets por módulo */
     }
-    // 3) Assets por módulo: lee las filas de Notion (Link Drive de cada módulo) y
-    //    los mete en los medios/audio de la app. Esto hace que copiar las filas de
-    //    un cliente a otro y elegirlo cargue todos los assets.
+
+    setSelectedClientId(pageId);
+    setRestoreMsg(null);
+    // Pausar el autoguardado mientras limpiamos y recargamos: así nunca se sube
+    // a Notion un estado a medias (vacío) durante la transición.
+    setSuppressSave(true);
+    setDirty(false);
     try {
+      // 0) Limpiar los assets del cliente anterior (imágenes/videos + audio).
+      //    Si este cliente no tiene links en Notion, queda vacío en vez de
+      //    heredar los medios del cliente previo. Los pasos 2 y 3 repueblan lo
+      //    que SÍ exista para este cliente.
+      clearClientAssets();
+      // 1) Identidad visual (logo, colores, tipografía)
+      loadClientIdentity(client);
+      setLogoPreview(client.logoUrl ?? project.identity.logoUrl);
+      // 2) Assets por módulo: lee las filas de Notion (Link Drive + Audio de cada
+      //    módulo) y los mete en los medios/audio de la app. Notion es la BBDD:
+      //    elegir el cliente repuebla todos sus assets guardados.
       const ar = await fetch(`/api/notion/load-assets?clientName=${encodeURIComponent(client.clientName)}&tutorialId=${project.tutorialId}`);
       const adata = await ar.json();
       const count = adata.assets ? Object.keys(adata.assets).length : 0;
@@ -105,6 +114,11 @@ export default function IdentidadVisual() {
       }
     } catch {
       /* si falla, queda al menos la identidad cargada */
+    } finally {
+      // Reanudar el autoguardado. Como no se modificó dirty acá, no dispara un
+      // guardado extra; sólo lo hará el próximo cambio real del usuario.
+      setSuppressSave(false);
+      setDirty(false);
     }
   };
 

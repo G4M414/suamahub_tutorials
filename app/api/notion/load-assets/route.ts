@@ -73,7 +73,12 @@ export async function GET(req: NextRequest) {
     });
     const data = await res.json();
 
-    const assets: Record<string, { linkDrive: string | null; audioUrl: string | null }> = {};
+    const assets: Record<string, {
+      linkDrive: string | null;
+      audioUrl: string | null;
+      voiceScript: string | null;
+      slotFields: Record<string, unknown> | null;
+    }> = {};
 
     for (const page of (data.results ?? []) as Array<Record<string, unknown>>) {
       const props = page.properties as Record<string, Record<string, unknown>>;
@@ -94,8 +99,34 @@ export async function GET(req: NextRequest) {
       const linkDrive = readUrl(props, 'Link Drive') ?? readUrl(props, 'Carpeta de assets (Drive)');
       const audioUrl = readUrl(props, 'Audio (Drive URL)');
 
-      if (!linkDrive && !audioUrl) continue;
-      assets[moduleName] = { linkDrive, audioUrl };
+      // Contenido: puede ser JSON (nuevo formato) o texto legible (formato viejo).
+      // JSON: { fields, voiceScript, causes, measures }
+      // Texto: "...\nGuion voz:\n..." (legado)
+      const contenido = readRichText(props, 'Contenido');
+      let voiceScript: string | null = null;
+      let slotFields: Record<string, unknown> | null = null;
+      if (contenido) {
+        try {
+          const parsed = JSON.parse(contenido) as Record<string, unknown>;
+          if (typeof parsed.voiceScript === 'string') voiceScript = parsed.voiceScript;
+          // slot regular: guarda { fields: {...} }
+          if (parsed.fields && typeof parsed.fields === 'object') {
+            slotFields = parsed.fields as Record<string, unknown>;
+          }
+          // módulo de riesgo: guarda { causes, measures } directamente
+          if (Array.isArray(parsed.causes) || Array.isArray(parsed.measures)) {
+            slotFields = parsed as Record<string, unknown>;
+          }
+        } catch {
+          // Formato viejo: extraer guion del marcador
+          const MARKER = '\nGuion voz:\n';
+          const idx = contenido.indexOf(MARKER);
+          if (idx >= 0) voiceScript = contenido.slice(idx + MARKER.length).trim();
+        }
+      }
+
+      if (!linkDrive && !audioUrl && !voiceScript && !slotFields) continue;
+      assets[moduleName] = { linkDrive, audioUrl, voiceScript, slotFields };
     }
 
     return NextResponse.json({ assets });
