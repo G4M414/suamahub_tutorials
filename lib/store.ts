@@ -378,12 +378,15 @@ export const useProjectStore = create<ProjectStore>()(
       name: 'suama-project-storage',
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        const DEFAULT_LOGO = '/logo-suama.jpg';
         const logo = state.project.identity.logoUrl;
 
-        // Reemplazar blob URLs (solo válidas en la sesión original) con el logo default
-        if (logo?.startsWith('blob:')) {
-          state.project.identity.logoUrl = DEFAULT_LOGO;
+        // Las blob: URLs solo son válidas en la sesión que las creó. Y el viejo
+        // default '/logo-suama.jpg' es una ruta RELATIVA: el preview (isValidAssetUrl
+        // exige http/https) y Shotstack la descartan → corner sin logo en los slides.
+        // En ambos casos limpiamos a null; al (re)seleccionar el cliente se recarga
+        // el logo real (Drive URL) desde Notion vía loadClientIdentity.
+        if (logo?.startsWith('blob:') || logo === '/logo-suama.jpg') {
+          state.project.identity.logoUrl = null;
         }
 
         // Limpiar media con blob URLs — quedan sin URL para re-subir
