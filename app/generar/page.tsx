@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from '@/lib/store';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import StudioPreview from '@/components/StudioPreview';
 import {
   CheckCircle2,
   AlertCircle,
@@ -203,6 +204,11 @@ export default function GenerarMP4() {
           Verificá que todo esté listo y lanzá el render en Shotstack API.
         </p>
       </div>
+
+      {/* Vista previa en el navegador (Studio SDK) — sin renderizar */}
+      <Card>
+        <StudioPreview />
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Checklist — 3 cols */}

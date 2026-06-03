@@ -26,7 +26,9 @@ export const DEFAULT_BRANDS: NotionClient[] = [
     companyName: '',
     industry: '',
     tipo: 'Plataforma',
-    logoUrl: '/logo-suama.jpg',
+    // Logo en Drive (mismo archivo que el registro SUAMA en Notion). Formato uc?id=
+    // = descarga directa, único que Shotstack puede consumir al renderizar.
+    logoUrl: 'https://drive.google.com/uc?id=15pM6VtFDnXw5OqQvitoyuAnD93Kbk-aO',
     assetsFolderUrl: null,
     fontFamily: 'harabara',
     secondaryText: '',
@@ -38,7 +40,9 @@ export const DEFAULT_BRANDS: NotionClient[] = [
     companyName: '',
     industry: '',
     tipo: 'Partner',
-    logoUrl: '/logo-biorisk.png',
+    // Logo en Drive (mismo archivo que el registro BIORISK en Notion). Formato uc?id=
+    // = descarga directa, único que Shotstack puede consumir al renderizar.
+    logoUrl: 'https://drive.google.com/uc?id=1g2KiOATbC6lF_v1wF9PGdm8Ub_jOkwkc',
     assetsFolderUrl: null,
     fontFamily: 'lato',
     secondaryText: 'Soluciones Integrales en Seguridad',

@@ -109,9 +109,10 @@ export default function ImagenesyVideos() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // La portada va a pantalla completa (16:9); el resto ocupa el panel derecho del split (1:1)
+  // La portada va a pantalla completa (16:9); el resto ocupa el panel derecho del
+  // split a sangre completa → recomendado 1:1 (llena el panel con recorte parejo).
   const getAspectRatio = (id: string) => id === 'portada_img' ? '16:9' : '1:1';
-  const getAspectLabel = (id: string) => id === 'portada_img' ? '16:9 — pantalla completa' : '1:1 — panel derecho';
+  const getAspectLabel = (id: string) => id === 'portada_img' ? '16:9 — pantalla completa' : '4:5 ideal (genera 1:1 con IA, sube 4:5 manual)';
 
   // Obtener placeholders requeridos dinámicamente según slots activos
   const requiredPlaceholders: { id: string; name: string; type: 'image' | 'video' }[] = [];
@@ -193,6 +194,7 @@ export default function ImagenesyVideos() {
         url: data.url,           // URL pública de Drive
         fileName: file.name,
         source: 'upload',
+        type: file.type.startsWith('video/') ? 'video' : 'image',
         generationStatus: 'success',
       });
     } catch (err) {
@@ -204,14 +206,26 @@ export default function ImagenesyVideos() {
     }
   };
 
-  const handleDriveUrlSave = () => {
+  const handleDriveUrlSave = async () => {
     const url = driveUrl.trim();
     if (!url) return;
+    // Si es una URL de Drive, detectar el tipo real (imagen/video) por su mimeType,
+    // así un MP4 de portada se trata como video (las URLs de Drive no traen extensión).
+    let detectedType: 'image' | 'video' | undefined;
+    const m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ?? url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (url.includes('drive.google') && m) {
+      try {
+        const res = await fetch(`/api/drive/meta?id=${m[1]}`);
+        const data = await res.json();
+        if (res.ok && (data.kind === 'video' || data.kind === 'image')) detectedType = data.kind;
+      } catch { /* si falla la detección, dejamos el type como estaba */ }
+    }
     updateMedia(selectedPlaceholder, {
       url,
       source: 'upload',
       generationStatus: 'success',
       fileName: undefined,
+      ...(detectedType ? { type: detectedType } : {}),
     });
   };
 
@@ -341,7 +355,7 @@ export default function ImagenesyVideos() {
                         <div className="truncate">
                           <p className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-slate-300'}`}>{ph.name}</p>
                           <span className="text-[10px] text-slate-500 leading-none">
-                            {ph.type === 'video' ? 'Video (16:9 MP4)' : 'Imagen (16:9 JPG/PNG)'}
+                            {ph.type === 'video' ? 'Video (16:9 MP4)' : `Imagen (${getAspectRatio(ph.id)} JPG/PNG)`}
                           </span>
                         </div>
                       </div>
@@ -399,15 +413,13 @@ export default function ImagenesyVideos() {
                   ) : currentMediaState.url ? (
                     <>
                       {currentMediaState.type === 'video' ? (
-                        <div className="w-full h-full relative">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={currentMediaState.url} alt="Video poster" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <div className="w-12 h-12 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center text-primary backdrop-blur-sm">
-                              <Play className="w-5 h-5 fill-current ml-0.5" />
-                            </div>
-                          </div>
-                        </div>
+                        // eslint-disable-next-line jsx-a11y/media-has-caption
+                        <video
+                          src={drivePreviewUrl(currentMediaState.url)}
+                          controls
+                          playsInline
+                          className="w-full h-full object-contain bg-black"
+                        />
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
