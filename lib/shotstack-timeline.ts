@@ -173,13 +173,21 @@ function bgClip(start: number, color: string) {
   };
 }
 
+function leftPanelCover(start: number, color: string) {
+  return {
+    asset: { type: 'html', html: `<div style="width:980px;height:1080px;background:${color}"></div>`, width: 980, height: 1080 },
+    start, length: D, position: 'center', offset: { x: -0.245, y: 0 },
+  };
+}
+
 function rightPanelImage(start: number, src: string) {
-  // Imagen CONTENIDA (sin recorte) anclada a la derecha: para imágenes verticales
-  // (4:5 / 3:4) ocupa la mitad derecha a altura completa sin ampliarse ni recortar.
+  // Imagen a sangre completa (fit 'crop' por defecto llena el cuadro 1920×1080);
+  // el panel blanco izquierdo (leftPanelCover) tapa la mitad izquierda. Llena el
+  // panel derecho. Recomendado: imágenes 1:1 (recorte parejo).
   return {
     asset: { type: 'image', src },
     start, length: D,
-    fit: 'contain', position: 'right', offset: { x: -0.02, y: 0 },
+    position: 'center', offset: { x: 0, y: 0 },
     transition: { in: 'fade' },
   };
 }
@@ -246,6 +254,7 @@ function buildRiskSlide(project: Project, rm: RiskSubModule, start: number) {
   clips.push(bgClip(start, colors.background));
   if (hasImg) {
     clips.push(rightPanelImage(start, imgUrl));
+    clips.push(leftPanelCover(start, colors.background));
   }
   clips.push(textOverlay(start, riskInner(rm, colors, hasImg)));
   if (isValidAssetUrl(identity.logoUrl)) clips.push(logoCorner(start, normalizeDriveUrl(identity.logoUrl)!));
@@ -269,6 +278,7 @@ function buildGenericSlide(project: Project, slotId: string, start: number) {
   clips.push(bgClip(start, colors.background));
   if (hasImg && imgUrl) {
     clips.push(rightPanelImage(start, imgUrl));
+    clips.push(leftPanelCover(start, colors.background));
   }
   const inner = slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg);
   clips.push(textOverlay(start, inner));
@@ -293,12 +303,12 @@ function slideUnits(project: Project): SlideUnit[] {
   const units: SlideUnit[] = [];
 
   // Frame HTML de cuadro completo para la vista previa (mismo layout que el render).
-  // Imagen a sangre completa (para portada 16:9).
+  // Imagen a sangre completa (portada 16:9 y panel derecho de los slides).
   const fullBleedImg = (src: string) =>
     `<img src="${previewSrc(src)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" />`;
-  // Imagen contenida (sin recorte) anclada a la derecha (para slides con imagen vertical).
-  const rightImg = (src: string) =>
-    `<img src="${previewSrc(src)}" style="position:absolute;right:38px;top:0;height:100%;width:auto;max-width:50%;object-fit:contain" />`;
+  // Panel blanco que tapa la mitad izquierda (deja la imagen en la mitad derecha).
+  const leftCover = (color: string) =>
+    `<div style="position:absolute;left:0;top:0;width:980px;height:1080px;background:${color}"></div>`;
   const logoImg = isValidAssetUrl(logoUrl)
     ? `<img src="${previewSrc(logoUrl)}" style="position:absolute;left:40px;top:44px;height:118px;object-fit:contain;object-position:left" />`
     : '';
@@ -337,7 +347,7 @@ function slideUnits(project: Project): SlideUnit[] {
           id: rm.id,
           title: rm.name,
           build: (start) => buildRiskSlide(project, rm, start),
-          previewHtml: () => frame((hasImg ? rightImg(imgUrl!) : '') + riskInner(rm, colors, hasImg)),
+          previewHtml: () => frame((hasImg ? fullBleedImg(imgUrl!) + leftCover(colors.background) : '') + riskInner(rm, colors, hasImg)),
           audioUrl: normalizeDriveUrl(voiceAudioUrls?.[rm.id]),
         });
       }
@@ -351,7 +361,7 @@ function slideUnits(project: Project): SlideUnit[] {
         id: slot.id,
         title,
         build: (start) => buildGenericSlide(project, slotId, start),
-        previewHtml: () => frame((hasImg ? rightImg(imgUrl!) : '') + (slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg))),
+        previewHtml: () => frame((hasImg ? fullBleedImg(imgUrl!) + leftCover(colors.background) : '') + (slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg))),
         audioUrl: normalizeDriveUrl(voiceAudioUrls?.[slot.id]),
       });
     }

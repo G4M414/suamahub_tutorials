@@ -140,6 +140,7 @@ export default function StudioPreview() {
             title={`Slide ${cur + 1}`}
             srcDoc={doc}
             sandbox="allow-same-origin"
+            allow="autoplay; fullscreen"
             style={{
               width: 1920,
               height: 1080,
@@ -147,7 +148,6 @@ export default function StudioPreview() {
               display: 'block',
               transform: `scale(${scale})`,
               transformOrigin: 'top left',
-              pointerEvents: 'none',
             }}
           />
         ) : (
