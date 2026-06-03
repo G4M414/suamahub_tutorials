@@ -193,6 +193,7 @@ export default function ImagenesyVideos() {
         url: data.url,           // URL pública de Drive
         fileName: file.name,
         source: 'upload',
+        type: file.type.startsWith('video/') ? 'video' : 'image',
         generationStatus: 'success',
       });
     } catch (err) {
@@ -204,14 +205,26 @@ export default function ImagenesyVideos() {
     }
   };
 
-  const handleDriveUrlSave = () => {
+  const handleDriveUrlSave = async () => {
     const url = driveUrl.trim();
     if (!url) return;
+    // Si es una URL de Drive, detectar el tipo real (imagen/video) por su mimeType,
+    // así un MP4 de portada se trata como video (las URLs de Drive no traen extensión).
+    let detectedType: 'image' | 'video' | undefined;
+    const m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ?? url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (url.includes('drive.google') && m) {
+      try {
+        const res = await fetch(`/api/drive/meta?id=${m[1]}`);
+        const data = await res.json();
+        if (res.ok && (data.kind === 'video' || data.kind === 'image')) detectedType = data.kind;
+      } catch { /* si falla la detección, dejamos el type como estaba */ }
+    }
     updateMedia(selectedPlaceholder, {
       url,
       source: 'upload',
       generationStatus: 'success',
       fileName: undefined,
+      ...(detectedType ? { type: detectedType } : {}),
     });
   };
 
