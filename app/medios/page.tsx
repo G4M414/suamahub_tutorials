@@ -109,9 +109,11 @@ export default function ImagenesyVideos() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // La portada va a pantalla completa (16:9); el resto ocupa el panel derecho del split (1:1)
-  const getAspectRatio = (id: string) => id === 'portada_img' ? '16:9' : '1:1';
-  const getAspectLabel = (id: string) => id === 'portada_img' ? '16:9 — pantalla completa' : '1:1 — panel derecho';
+  // La portada va a pantalla completa (16:9); el resto ocupa el panel derecho del
+  // split con imagen vertical. Para generar con IA usamos 3:4 (ratio válido de
+  // Gemini); una imagen 4:5 subida a mano también entra completa (layout 'contain').
+  const getAspectRatio = (id: string) => id === 'portada_img' ? '16:9' : '3:4';
+  const getAspectLabel = (id: string) => id === 'portada_img' ? '16:9 — pantalla completa' : '3:4 / 4:5 vertical — panel derecho';
 
   // Obtener placeholders requeridos dinámicamente según slots activos
   const requiredPlaceholders: { id: string; name: string; type: 'image' | 'video' }[] = [];
@@ -354,7 +356,7 @@ export default function ImagenesyVideos() {
                         <div className="truncate">
                           <p className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-slate-300'}`}>{ph.name}</p>
                           <span className="text-[10px] text-slate-500 leading-none">
-                            {ph.type === 'video' ? 'Video (16:9 MP4)' : 'Imagen (16:9 JPG/PNG)'}
+                            {ph.type === 'video' ? 'Video (16:9 MP4)' : `Imagen (${getAspectRatio(ph.id)} JPG/PNG)`}
                           </span>
                         </div>
                       </div>
