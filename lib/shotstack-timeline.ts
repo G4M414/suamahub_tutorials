@@ -173,21 +173,15 @@ function bgClip(start: number, color: string) {
   };
 }
 
-function leftPanelCover(start: number, color: string) {
-  return {
-    asset: { type: 'html', html: `<div style="width:980px;height:1080px;background:${color}"></div>`, width: 980, height: 1080 },
-    start, length: D, position: 'center', offset: { x: -0.245, y: 0 },
-  };
-}
-
 function rightPanelImage(start: number, src: string) {
-  // Imagen a sangre completa (fit 'crop' por defecto llena el cuadro 1920×1080);
-  // el panel blanco izquierdo (leftPanelCover) tapa la mitad izquierda. Llena el
-  // panel derecho. Recomendado: imágenes 1:1 (recorte parejo).
+  // Imagen que LLENA el panel derecho (~960×1080) sin sobre-ampliar: se contiene
+  // (height completa, sin recorte vertical innecesario) y se escala ~1.12 para
+  // cubrir el ancho del panel. Para una imagen 4:5 → llena pleno con ~10% de
+  // recorte (vs ~55% si cubriera todo el cuadro 16:9). Anclada a la derecha.
   return {
     asset: { type: 'image', src },
     start, length: D,
-    position: 'center', offset: { x: 0, y: 0 },
+    fit: 'contain', position: 'right', offset: { x: 0, y: 0 }, scale: 1.12,
     transition: { in: 'fade' },
   };
 }
@@ -252,10 +246,7 @@ function buildRiskSlide(project: Project, rm: RiskSubModule, start: number) {
   const hasImg = isValidAssetUrl(imgUrl);
 
   clips.push(bgClip(start, colors.background));
-  if (hasImg) {
-    clips.push(rightPanelImage(start, imgUrl));
-    clips.push(leftPanelCover(start, colors.background));
-  }
+  if (hasImg) clips.push(rightPanelImage(start, imgUrl));
   clips.push(textOverlay(start, riskInner(rm, colors, hasImg)));
   if (isValidAssetUrl(identity.logoUrl)) clips.push(logoCorner(start, normalizeDriveUrl(identity.logoUrl)!));
   return clips;
@@ -276,10 +267,7 @@ function buildGenericSlide(project: Project, slotId: string, start: number) {
   const hasImg = isValidAssetUrl(imgUrl);
 
   clips.push(bgClip(start, colors.background));
-  if (hasImg && imgUrl) {
-    clips.push(rightPanelImage(start, imgUrl));
-    clips.push(leftPanelCover(start, colors.background));
-  }
+  if (hasImg && imgUrl) clips.push(rightPanelImage(start, imgUrl));
   const inner = slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg);
   clips.push(textOverlay(start, inner));
   if (isValidAssetUrl(identity.logoUrl)) clips.push(logoCorner(start, normalizeDriveUrl(identity.logoUrl)!));
@@ -306,9 +294,10 @@ function slideUnits(project: Project): SlideUnit[] {
   // Imagen a sangre completa (portada 16:9 y panel derecho de los slides).
   const fullBleedImg = (src: string) =>
     `<img src="${previewSrc(src)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" />`;
-  // Panel blanco que tapa la mitad izquierda (deja la imagen en la mitad derecha).
-  const leftCover = (color: string) =>
-    `<div style="position:absolute;left:0;top:0;width:980px;height:1080px;background:${color}"></div>`;
+  // Imagen cubriendo solo el panel derecho (50% del ancho, 100% del alto).
+  // 4:5 → llena pleno con ~10% de recorte (no ~55% como a sangre completa 16:9).
+  const rightPanelPreview = (src: string) =>
+    `<img src="${previewSrc(src)}" style="position:absolute;right:0;top:0;width:50%;height:100%;object-fit:cover" />`;
   const logoImg = isValidAssetUrl(logoUrl)
     ? `<img src="${previewSrc(logoUrl)}" style="position:absolute;left:40px;top:44px;height:118px;object-fit:contain;object-position:left" />`
     : '';
@@ -347,7 +336,7 @@ function slideUnits(project: Project): SlideUnit[] {
           id: rm.id,
           title: rm.name,
           build: (start) => buildRiskSlide(project, rm, start),
-          previewHtml: () => frame((hasImg ? fullBleedImg(imgUrl!) + leftCover(colors.background) : '') + riskInner(rm, colors, hasImg)),
+          previewHtml: () => frame((hasImg ? rightPanelPreview(imgUrl!) : '') + riskInner(rm, colors, hasImg)),
           audioUrl: normalizeDriveUrl(voiceAudioUrls?.[rm.id]),
         });
       }
@@ -361,7 +350,7 @@ function slideUnits(project: Project): SlideUnit[] {
         id: slot.id,
         title,
         build: (start) => buildGenericSlide(project, slotId, start),
-        previewHtml: () => frame((hasImg ? fullBleedImg(imgUrl!) + leftCover(colors.background) : '') + (slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg))),
+        previewHtml: () => frame((hasImg ? rightPanelPreview(imgUrl!) : '') + (slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg))),
         audioUrl: normalizeDriveUrl(voiceAudioUrls?.[slot.id]),
       });
     }

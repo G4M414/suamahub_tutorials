@@ -112,7 +112,7 @@ export default function ImagenesyVideos() {
   // La portada va a pantalla completa (16:9); el resto ocupa el panel derecho del
   // split a sangre completa → recomendado 1:1 (llena el panel con recorte parejo).
   const getAspectRatio = (id: string) => id === 'portada_img' ? '16:9' : '1:1';
-  const getAspectLabel = (id: string) => id === 'portada_img' ? '16:9 — pantalla completa' : '1:1 — panel derecho';
+  const getAspectLabel = (id: string) => id === 'portada_img' ? '16:9 — pantalla completa' : '4:5 ideal (genera 1:1 con IA, sube 4:5 manual)';
 
   // Obtener placeholders requeridos dinámicamente según slots activos
   const requiredPlaceholders: { id: string; name: string; type: 'image' | 'video' }[] = [];
