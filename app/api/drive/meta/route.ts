@@ -25,12 +25,15 @@ export async function GET(req: NextRequest) {
 
   try {
     const drive = getDriveClient();
-    const meta = await drive.files.get({ fileId, fields: 'mimeType,name', supportsAllDrives: true });
+    const meta = await drive.files.get({ fileId, fields: 'mimeType', supportsAllDrives: true });
     const mimeType = meta.data.mimeType ?? '';
+    // Solo devolvemos la categoría (no el nombre del archivo) para no filtrar
+    // metadatos de archivos a los que el caller no debería tener visibilidad.
     const kind = mimeType.startsWith('video/') ? 'video' : mimeType.startsWith('image/') ? 'image' : 'other';
-    return NextResponse.json({ mimeType, name: meta.data.name ?? null, kind });
+    return NextResponse.json({ kind });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    // Detalle solo en el server; respuesta genérica al cliente (no diferenciar 404/403).
+    console.error('[drive/meta] error:', err);
+    return NextResponse.json({ error: 'No se pudo obtener el tipo del archivo' }, { status: 500 });
   }
 }
