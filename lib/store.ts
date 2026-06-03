@@ -25,6 +25,7 @@ interface ProjectStore {
     audioUrl: string | null;
     voiceScript?: string | null;
     slotFields?: Record<string, unknown> | null;
+    kind?: 'image' | 'video' | 'other';
   }>) => void;
   clearClientAssets: () => void;
   
@@ -168,11 +169,18 @@ export const useProjectStore = create<ProjectStore>()(
           const voiceAudioUrls = { ...state.project.voiceAudioUrls };
           const voiceScript = { ...state.project.voiceScript };
 
-          const setMedia = (placeholderId: string, url: string) => {
+          // type: usa el kind detectado desde Drive (imagen/video). Si no vino kind
+          // (detección falló o no es un archivo de Drive), conserva el type existente
+          // o cae a 'image'. Así un MP4 de portada se restaura como video y no se rompe.
+          const setMedia = (placeholderId: string, url: string, kind?: 'image' | 'video' | 'other') => {
             const existing = media[placeholderId];
+            const type: MediaItem['type'] =
+              kind === 'video' ? 'video'
+              : kind === 'image' ? 'image'
+              : existing?.type ?? 'image';
             media[placeholderId] = existing
-              ? { ...existing, url }
-              : { id: `media_${placeholderId}_${Date.now()}`, placeholderId, type: 'image', source: 'upload', url };
+              ? { ...existing, url, type }
+              : { id: `media_${placeholderId}_${Date.now()}`, placeholderId, type, source: 'upload', url };
           };
 
           const slots = state.project.slots.map(slot => {
@@ -180,7 +188,7 @@ export const useProjectStore = create<ProjectStore>()(
               const riskModules = slot.riskModules.map(rm => {
                 const a = assets[rm.name];
                 if (!a) return rm;
-                if (a.linkDrive) setMedia(rm.mediaId, a.linkDrive);
+                if (a.linkDrive) setMedia(rm.mediaId, a.linkDrive, a.kind);
                 if (a.audioUrl) voiceAudioUrls[rm.id] = a.audioUrl;
                 if (a.voiceScript) voiceScript[rm.id] = a.voiceScript;
                 // Restaurar causes y measures si los guardamos como JSON
@@ -201,7 +209,7 @@ export const useProjectStore = create<ProjectStore>()(
               const mediaId = slot.id === 'SLOT_01' ? 'portada_img'
                             : slot.id === 'SLOT_02' ? 'objetivos_img'
                             : slot.mediaId ?? null;
-              if (mediaId && a.linkDrive) setMedia(mediaId, a.linkDrive);
+              if (mediaId && a.linkDrive) setMedia(mediaId, a.linkDrive, a.kind);
               if (a.audioUrl) voiceAudioUrls[slot.id] = a.audioUrl;
               if (a.voiceScript) voiceScript[slot.id] = a.voiceScript;
               // Restaurar campos de texto del slot (objectives, laws, definitions, etc.)
@@ -378,12 +386,15 @@ export const useProjectStore = create<ProjectStore>()(
       name: 'suama-project-storage',
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        const DEFAULT_LOGO = '/logo-suama.jpg';
         const logo = state.project.identity.logoUrl;
 
-        // Reemplazar blob URLs (solo válidas en la sesión original) con el logo default
-        if (logo?.startsWith('blob:')) {
-          state.project.identity.logoUrl = DEFAULT_LOGO;
+        // Las blob: URLs solo son válidas en la sesión que las creó. Y el viejo
+        // default '/logo-suama.jpg' es una ruta RELATIVA: el preview (isValidAssetUrl
+        // exige http/https) y Shotstack la descartan → corner sin logo en los slides.
+        // En ambos casos limpiamos a null; al (re)seleccionar el cliente se recarga
+        // el logo real (Drive URL) desde Notion vía loadClientIdentity.
+        if (logo?.startsWith('blob:') || logo === '/logo-suama.jpg') {
+          state.project.identity.logoUrl = null;
         }
 
         // Limpiar media con blob URLs — quedan sin URL para re-subir

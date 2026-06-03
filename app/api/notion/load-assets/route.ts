@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nfetch } from '@/lib/notion-fetch';
+import { detectDriveKind, driveFileId, type DriveKind } from '@/lib/drive-kind';
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const PROYECTOS_DB = process.env.NOTION_PROYECTOS_DB_ID;
@@ -78,6 +79,7 @@ export async function GET(req: NextRequest) {
       audioUrl: string | null;
       voiceScript: string | null;
       slotFields: Record<string, unknown> | null;
+      kind?: DriveKind;
     }> = {};
 
     for (const page of (data.results ?? []) as Array<Record<string, unknown>>) {
@@ -128,6 +130,22 @@ export async function GET(req: NextRequest) {
       if (!linkDrive && !audioUrl && !voiceScript && !slotFields) continue;
       assets[moduleName] = { linkDrive, audioUrl, voiceScript, slotFields };
     }
+
+    // Detectar el tipo real (imagen/video) de cada Link Drive desde Drive, así el
+    // front NO asume 'image' (era el bug: un MP4 de portada guardado en Notion se
+    // restauraba como imagen al recargar y dejaba de reproducirse). En paralelo;
+    // si Drive falla para alguno, ese asset queda sin kind y el store usa el default.
+    await Promise.all(
+      Object.values(assets).map(async (a) => {
+        const id = driveFileId(a.linkDrive);
+        if (!id) return;
+        try {
+          a.kind = await detectDriveKind(id);
+        } catch {
+          /* sin kind: el store conserva el type existente o usa 'image' */
+        }
+      })
+    );
 
     return NextResponse.json({ assets });
   } catch (err) {
