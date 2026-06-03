@@ -11,6 +11,16 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Upload, Trash2, ShieldAlert, Sparkles, Loader2, Users, RefreshCw, ExternalLink } from 'lucide-react';
 
+// Convierte una URL de logo a algo que <img> pueda mostrar en el preview.
+// Las URLs de Google Drive (cualquier formato) se sirven por el proxy server-side
+// para evitar CORS/cookies. blob:, rutas locales y otras URLs quedan igual.
+// (Mismo criterio que Módulo 3 / medios, para que todos los logos se vean bien.)
+function logoPreviewSrc(url: string | null): string | null {
+  if (!url || url.startsWith('blob:') || url.startsWith('/') || !url.includes('drive.google')) return url;
+  const m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ?? url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? `/api/drive/proxy?id=${m[1]}` : url;
+}
+
 export default function IdentidadVisual() {
   const { project, updateColors, updateFont, updateLogo, setClientName, setCompanyName, setIndustry, setSecondaryText, loadClientIdentity, applyNotionAssets, clearClientAssets } = useProjectStore();
   const { setSuppressSave, setDirty } = useUiStore();
@@ -154,7 +164,8 @@ export default function IdentidadVisual() {
     }
   };
 
-  const DEFAULT_LOGO = '/logo-suama.jpg';
+  // Logo SUAMA en Drive (formato uc?id= = render-válido en Shotstack), igual que en DEFAULT_BRANDS.
+  const DEFAULT_LOGO = 'https://drive.google.com/uc?id=15pM6VtFDnXw5OqQvitoyuAnD93Kbk-aO';
 
   const handleRemoveLogo = () => {
     setLogoPreview(DEFAULT_LOGO);
@@ -311,7 +322,7 @@ export default function IdentidadVisual() {
                 {logoPreview ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain p-2" />
+                    <img src={logoPreviewSrc(logoPreview) ?? undefined} alt="Logo preview" className="w-full h-full object-contain p-2" />
                     <button 
                       onClick={handleRemoveLogo}
                       className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-rose-500 transition-opacity duration-200"
@@ -461,7 +472,7 @@ export default function IdentidadVisual() {
                 <div className="h-11 md:h-12 flex items-center">
                   {logoPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoPreview} alt="Logo corner" className="h-full w-auto max-w-[240px] object-contain object-left" />
+                    <img src={logoPreviewSrc(logoPreview) ?? undefined} alt="Logo corner" className="h-full w-auto max-w-[240px] object-contain object-left" />
                   ) : (
                     <div className="flex items-center space-x-1.5 opacity-60">
                       <div className="w-5 h-5 rounded-full" style={{ backgroundColor: colors.primary }} />

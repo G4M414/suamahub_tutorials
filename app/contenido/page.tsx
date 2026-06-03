@@ -12,13 +12,15 @@ import TextArea from '@/components/ui/TextArea';
 import { Plus, Trash2, HelpCircle, Layers, ClipboardEdit } from 'lucide-react';
 
 export default function ContenidoTextual() {
-  const { 
-    project, 
-    toggleSlot, 
-    updateSlotFields, 
-    toggleRiskModule, 
-    updateRiskModule 
+  const {
+    project,
+    toggleSlot,
+    updateSlotFields,
+    toggleRiskModule,
+    updateRiskModule,
+    setPortadaMode,
   } = useProjectStore();
+  const portadaMode = project.portadaMode ?? 'template';
 
   const [selectedSlotId, setSelectedSlotId] = useState<string>('SLOT_01');
   const [selectedRiskId, setSelectedRiskId] = useState<string>('08a');
@@ -214,18 +216,48 @@ export default function ContenidoTextual() {
                   {/* Título y Subtítulo para Portada */}
                   {selectedSlot.id === 'SLOT_01' && (
                     <div className="space-y-4">
-                      <Input
-                        label="Título del Tutorial"
-                        value={selectedSlot.fields.title as string || ''}
-                        onChange={(e) => handleFieldChange('title', e.target.value)}
-                        placeholder="Ingrese el título principal"
-                      />
-                      <Input
-                        label="Subtítulo / Bajada"
-                        value={selectedSlot.fields.subtitle as string || ''}
-                        onChange={(e) => handleFieldChange('subtitle', e.target.value)}
-                        placeholder="Ingrese el subtítulo"
-                      />
+                      {/* Toggle: plantilla diseñada vs portada propia */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tipo de portada</label>
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/60 border border-slate-800 rounded-xl">
+                          <button
+                            type="button"
+                            onClick={() => setPortadaMode('template')}
+                            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${portadaMode === 'template' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            Plantilla SUAMA
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPortadaMode('custom')}
+                            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${portadaMode === 'custom' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            Portada propia
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {portadaMode === 'template'
+                            ? 'Título + logo sobre el fondo de portada (la imagen va en Imágenes y Videos → portada).'
+                            : 'Tu imagen o video de portada a pantalla completa, sin texto encima. Cargá el archivo en Imágenes y Videos → portada.'}
+                        </p>
+                      </div>
+
+                      {portadaMode === 'template' && (
+                        <>
+                          <Input
+                            label="Título del Tutorial"
+                            value={selectedSlot.fields.title as string || ''}
+                            onChange={(e) => handleFieldChange('title', e.target.value)}
+                            placeholder="Ingrese el título principal"
+                          />
+                          <Input
+                            label="Subtítulo / Bajada"
+                            value={selectedSlot.fields.subtitle as string || ''}
+                            onChange={(e) => handleFieldChange('subtitle', e.target.value)}
+                            placeholder="Ingrese el subtítulo"
+                          />
+                        </>
+                      )}
                     </div>
                   )}
 

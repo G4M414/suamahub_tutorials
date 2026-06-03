@@ -77,6 +77,9 @@ export interface Project {
   companyName: string;
   industry: string;
   tutorialId: 'tutorial_01' | 'tutorial_02';
+  // Portada: 'template' = diseño SUAMA (título+logo sobre fondo);
+  //          'custom'   = imagen/video propio a pantalla completa, sin overlay.
+  portadaMode?: 'template' | 'custom';
   identity: ClientIdentity;
   slots: Slot[];
   media: Record<string, MediaItem>; // maps placeholderId -> MediaItem

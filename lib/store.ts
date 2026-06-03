@@ -11,6 +11,7 @@ interface ProjectStore {
   setClientName: (name: string) => void;
   setCompanyName: (name: string) => void;
   setIndustry: (industry: string) => void;
+  setPortadaMode: (mode: 'template' | 'custom') => void;
   
   // Identity
   updateColors: (colors: Partial<ColorPalette>) => void;
@@ -74,6 +75,11 @@ export const useProjectStore = create<ProjectStore>()(
       setIndustry: (industry) =>
         set((state) => ({
           project: { ...state.project, industry },
+        })),
+
+      setPortadaMode: (mode) =>
+        set((state) => ({
+          project: { ...state.project, portadaMode: mode },
         })),
         
       updateColors: (colors) =>
