@@ -36,10 +36,35 @@ export async function GET(req: NextRequest) {
 
     const contentType = meta.data.mimeType ?? 'image/jpeg';
     const buffer = Buffer.from(res.data as ArrayBuffer);
+    const total = buffer.length;
+
+    // Soporte de Range para que <video>/<audio> reproduzcan y se puedan buscar.
+    const range = req.headers.get('range');
+    if (range) {
+      const m = /bytes=(\d*)-(\d*)/.exec(range);
+      let start = m && m[1] ? parseInt(m[1], 10) : 0;
+      let end = m && m[2] ? parseInt(m[2], 10) : total - 1;
+      if (Number.isNaN(start) || start < 0) start = 0;
+      if (Number.isNaN(end) || end >= total) end = total - 1;
+      if (start > end) start = 0;
+      const chunk = buffer.subarray(start, end + 1);
+      return new NextResponse(chunk, {
+        status: 206,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Range': `bytes ${start}-${end}/${total}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': String(chunk.length),
+          'Cache-Control': 'public, max-age=86400',
+        },
+      });
+    }
 
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': String(total),
         'Cache-Control': 'public, max-age=86400',
       },
     });

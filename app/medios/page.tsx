@@ -412,15 +412,13 @@ export default function ImagenesyVideos() {
                   ) : currentMediaState.url ? (
                     <>
                       {currentMediaState.type === 'video' ? (
-                        <div className="w-full h-full relative">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={currentMediaState.url} alt="Video poster" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <div className="w-12 h-12 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center text-primary backdrop-blur-sm">
-                              <Play className="w-5 h-5 fill-current ml-0.5" />
-                            </div>
-                          </div>
-                        </div>
+                        // eslint-disable-next-line jsx-a11y/media-has-caption
+                        <video
+                          src={drivePreviewUrl(currentMediaState.url)}
+                          controls
+                          playsInline
+                          className="w-full h-full object-contain bg-black"
+                        />
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
