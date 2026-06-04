@@ -227,17 +227,17 @@ function logoCorner(start: number, logoUrl: string) {
 
 // Panel derecho: clip de imagen en track 2 (debajo del html5).
 // Shotstack fetchea la URL de Drive con su HTTP client — no falla como en <img> dentro de html5.
-// width/height = caja de 960×1080 (mitad derecha, casi 4:5). fit:'cover' llena esa caja con
-// recorte mínimo (no se estira a 16:9 como cuando cubría el frame entero). position:'right'
-// la ancla al borde derecho. transition fade: mismo fundido que el texto del html5.
-function rightPanelClip(start: number, imgUrl: string) {
+// 50px de margen en cada lado dentro del panel de 960×1080.
+// offset.x = -50/1920 ≈ -0.026 para crear margen derecho (position:'right' ancla al borde, sin offset quedaría 0px margen derecho).
+function rightPanelClip(start: number, imgUrl: string, mediaType: 'image' | 'video' = 'image') {
   return {
     _track: 2,
-    asset: { type: 'image', src: imgUrl },
+    asset: { type: mediaType, src: imgUrl },
     start, length: D,
-    width: 960, height: 1080,
-    fit: 'cover',
+    width: 860, height: 980,
+    fit: 'contain',
     position: 'right',
+    offset: { x: -0.026, y: 0 },
     transition: { in: 'fade' },
   };
 }
@@ -255,11 +255,13 @@ function buildPortadaSlide(project: Project, start: number): unknown[] {
   const isVideo = pm?.type === 'video';
   const logoUrl = isValidAssetUrl(identity.logoUrl) ? normalizeDriveUrl(identity.logoUrl) : null;
 
-  // Portada custom: imagen/video a sangre + logo corner encima.
+  // Portada custom: imagen/video a sangre.
+  // Con video: sin logo corner — el video ya tiene el branding incluido.
+  // Con imagen: logo corner sí se agrega (la imagen no lo lleva).
   if (project.portadaMode === 'custom' && isValidAssetUrl(imgUrl)) {
     return [
       { _track: 1, asset: { type: isVideo ? 'video' : 'image', src: imgUrl }, start, length: D, position: 'center', offset: { x: 0, y: 0 } },
-      logoUrl ? logoCorner(start, logoUrl) : null,
+      !isVideo && logoUrl ? logoCorner(start, logoUrl) : null,
     ].filter(Boolean);
   }
 
@@ -276,13 +278,15 @@ function buildPortadaSlide(project: Project, start: number): unknown[] {
 function buildRiskSlide(project: Project, rm: RiskSubModule, start: number): unknown[] {
   const { identity, media } = project;
   const { colors } = identity;
-  const imgUrl = normalizeDriveUrl(media[rm.mediaId]?.url);
+  const mediaItem = media[rm.mediaId];
+  const imgUrl = normalizeDriveUrl(mediaItem?.url);
   const hasImg = isValidAssetUrl(imgUrl);
+  const mediaType = mediaItem?.type ?? 'image';
   const logoUrl = isValidAssetUrl(identity.logoUrl) ? normalizeDriveUrl(identity.logoUrl) : null;
   return [
-    slideHtml5(start, riskInner(rm, colors, hasImg, null)),   // imgUrl=null: no <img> en html5
-    logoUrl ? logoCorner(start, logoUrl) : null,               // track 0: logo encima
-    hasImg ? rightPanelClip(start, imgUrl!) : null,            // track 2: imagen abajo
+    slideHtml5(start, riskInner(rm, colors, hasImg, null)),
+    logoUrl ? logoCorner(start, logoUrl) : null,
+    hasImg ? rightPanelClip(start, imgUrl!, mediaType) : null,
   ].filter(Boolean);
 }
 
@@ -296,17 +300,19 @@ function buildGenericSlide(project: Project, slotId: string, start: number): unk
   const mediaKey = slotId === 'SLOT_01' ? 'portada_img'
     : slotId === 'SLOT_02' ? 'objetivos_img'
     : `${slotId.toLowerCase()}_img`;
-  const imgUrl = normalizeDriveUrl(media[mediaKey]?.url ?? null);
+  const mediaItem = media[mediaKey] ?? null;
+  const imgUrl = normalizeDriveUrl(mediaItem?.url ?? null);
   const hasImg = isValidAssetUrl(imgUrl);
+  const mediaType = mediaItem?.type ?? 'image';
   const logoUrl = isValidAssetUrl(identity.logoUrl) ? normalizeDriveUrl(identity.logoUrl) : null;
   const isSlot10 = slotId === 'SLOT_10';
   const inner = isSlot10
     ? cierreInner(slot.fields, colors)
-    : genericInner(title, slot.fields, colors, hasImg, null);  // imgUrl=null: no <img> en html5
+    : genericInner(title, slot.fields, colors, hasImg, null);
   return [
     slideHtml5(start, inner),
     logoUrl ? logoCorner(start, logoUrl) : null,
-    !isSlot10 && hasImg ? rightPanelClip(start, imgUrl!) : null,
+    !isSlot10 && hasImg ? rightPanelClip(start, imgUrl!, mediaType) : null,
   ].filter(Boolean);
 }
 
