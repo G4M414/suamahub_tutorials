@@ -75,8 +75,12 @@ async function audioDurationSec(url: string | null): Promise<number | null> {
 // Cada slide pinta su texto en una columna anclada a la izquierda (left:96px).
 // Con imagen a la derecha la columna es angosta; sin imagen ocupa casi todo.
 
-function portadaInner(title: string, subtitle: string, colors: ColorPalette): string {
+function portadaInner(title: string, subtitle: string, colors: ColorPalette, bgImgUrl?: string | null): string {
+  const bgStyle = bgImgUrl
+    ? `url('${bgImgUrl}') no-repeat center/cover,${colors.background}`
+    : colors.background;
   return (
+    `<div style="position:absolute;inset:0;background:${bgStyle}"></div>` +
     `<div style="position:absolute;left:0;top:0;width:980px;height:1080px;background:rgba(0,0,0,0.6)"></div>` +
     `<div style="position:absolute;left:96px;top:360px;width:790px">` +
       `<div style="width:180px;height:8px;background:${colors.primary};margin-bottom:30px"></div>` +
@@ -86,18 +90,28 @@ function portadaInner(title: string, subtitle: string, colors: ColorPalette): st
   );
 }
 
-function riskInner(rm: RiskSubModule, colors: ColorPalette, hasImg: boolean): string {
+function riskInner(rm: RiskSubModule, colors: ColorPalette, hasImg: boolean, imgUrl?: string | null): string {
   const colW = hasImg ? 790 : 1720;
+  const bgW = hasImg ? 960 : 1920;
   const label = (t: string) =>
     `<div style="font-size:18px;font-weight:700;color:${colors.secondary};text-transform:uppercase;letter-spacing:2px;margin-top:26px">${t}</div>`;
   const ul = (items: string[]) =>
     `<ul style="font-size:24px;color:${colors.text};margin:8px 0 0;padding-left:26px;line-height:1.4">${items.map(i => `<li style="margin-bottom:7px">${i}</li>`).join('')}</ul>`;
+  // Panel derecho: imagen embebida en el html5 para evitar el z-order issue de Shotstack
+  // (clips image DESPUÉS de html5 en la misma track aparecen debajo del fondo blanco del html5).
+  const rightPanel = (hasImg && imgUrl)
+    ? `<div style="position:absolute;left:960px;right:0;top:0;height:1080px;overflow:hidden"><img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;object-position:center" /></div>`
+    : '';
   return (
-    `<div style="position:absolute;left:96px;top:210px;width:${colW}px">` +
-      `<div style="width:120px;height:8px;background:${colors.primary};margin-bottom:22px"></div>` +
-      `<div style="font-size:46px;font-weight:900;color:${colors.primary};line-height:1.12;padding-bottom:18px">${rm.name}</div>` +
-      label('Causas') + ul(rm.causes) +
-      (rm.measures?.length ? label('Medidas') + ul(rm.measures) : '') +
+    `<div style="position:absolute;left:0;top:0;width:${bgW}px;height:1080px;background:${colors.background}"></div>` +
+    rightPanel +
+    `<div style="position:relative;padding:210px 0 0 96px;box-sizing:border-box;width:${bgW}px">` +
+      `<div style="width:${colW}px">` +
+        `<div style="width:120px;height:8px;background:${colors.primary};margin-bottom:22px"></div>` +
+        `<div style="font-size:46px;font-weight:900;color:${colors.primary};line-height:1.12;padding-bottom:18px">${rm.name}</div>` +
+        label('Causas') + ul(rm.causes) +
+        (rm.measures?.length ? label('Medidas') + ul(rm.measures) : '') +
+      `</div>` +
     `</div>`
   );
 }
@@ -135,7 +149,6 @@ function cierreInner(fields: Record<string, string | string[] | DefinitionItem[]
   const msg = (fields.closingMessage as string) || '';
   const web = (fields.web as string) || '';
   const brand = (fields.brandText as string) || '';
-  // Una línea por oración → frases punchy, sin cortes feos a mitad de oración.
   const msgHtml = msg
     ? `<div style="max-width:1640px">${msg
         .split(/(?<=\.)\s+/)
@@ -144,55 +157,58 @@ function cierreInner(fields: Record<string, string | string[] | DefinitionItem[]
         .join('')}</div>`
     : '';
   return (
-    `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 140px;box-sizing:border-box">` +
-      `<div style="width:120px;height:8px;background:${colors.primary};margin-bottom:44px"></div>` +
-      msgHtml +
-      (web ? `<div style="font-size:34px;font-weight:800;color:${colors.secondary};margin-top:50px">${web}</div>` : '') +
-      (brand ? `<div style="font-size:23px;color:${colors.text};opacity:0.78;margin-top:16px;text-transform:uppercase;letter-spacing:4px">${brand}</div>` : '') +
+    `<div style="position:absolute;inset:0;background:${colors.background}"></div>` +
+    `<div style="position:relative;display:table;width:1920px;height:1080px">` +
+      `<div style="display:table-cell;vertical-align:middle;text-align:center;padding:0 140px">` +
+        `<div style="width:120px;height:8px;background:${colors.primary};margin:0 auto 44px"></div>` +
+        msgHtml +
+        (web ? `<div style="font-size:34px;font-weight:800;color:${colors.secondary};margin-top:50px">${web}</div>` : '') +
+        (brand ? `<div style="font-size:23px;color:${colors.text};opacity:0.78;margin-top:16px;text-transform:uppercase;letter-spacing:4px">${brand}</div>` : '') +
+      `</div>` +
     `</div>`
   );
 }
 
-function genericInner(title: string, fields: Record<string, string | string[] | DefinitionItem[]>, colors: ColorPalette, hasImg: boolean): string {
+function genericInner(title: string, fields: Record<string, string | string[] | DefinitionItem[]>, colors: ColorPalette, hasImg: boolean, imgUrl?: string | null): string {
   const colW = hasImg ? 790 : 1720;
+  const bgW = hasImg ? 960 : 1920;
+  const rightPanel = (hasImg && imgUrl)
+    ? `<div style="position:absolute;left:960px;right:0;top:0;height:1080px;overflow:hidden"><img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;object-position:center" /></div>`
+    : '';
   return (
-    `<div style="position:absolute;left:96px;top:210px;width:${colW}px">` +
-      `<div style="width:160px;height:8px;background:${colors.primary};margin-bottom:22px"></div>` +
-      `<div style="font-size:46px;font-weight:900;color:${colors.primary};line-height:1.15;padding-bottom:18px">${title}</div>` +
-      fieldsContent(fields, colors) +
+    `<div style="position:absolute;left:0;top:0;width:${bgW}px;height:1080px;background:${colors.background}"></div>` +
+    rightPanel +
+    `<div style="position:relative;padding:210px 0 0 96px;box-sizing:border-box;width:${bgW}px">` +
+      `<div style="width:${colW}px">` +
+        `<div style="width:160px;height:8px;background:${colors.primary};margin-bottom:22px"></div>` +
+        `<div style="font-size:46px;font-weight:900;color:${colors.primary};line-height:1.15;padding-bottom:18px">${title}</div>` +
+        fieldsContent(fields, colors) +
+      `</div>` +
     `</div>`
   );
 }
 
 // ── Helpers de clips (render Shotstack) ──────────────────────────────────────────
+// REGLA DE COMPOSICIÓN SHOTSTACK: html5 clips que aparecen DESPUÉS de un image clip
+// en la misma track no se renderizan. Por eso cada slide usa UN SOLO html5 clip
+// (slideHtml5) que contiene fondo + texto, y va PRIMERO en la track. Los image
+// clips (rightPanel, logo) van DESPUÉS y se componen encima del html5.
 
-function bgClip(start: number, color: string) {
-  return {
-    asset: { type: 'html', html: `<div style="width:1920px;height:1080px;background:${color}"></div>`, width: 1920, height: 1080 },
-    start, length: D, position: 'center', offset: { x: 0, y: 0 },
-  };
-}
+// ARQUITECTURA DE TRACKS (Shotstack multi-track compositing):
+// Track 0 (topmost): logoCorner clips → aparece encima de todo
+// Track 1 (middle):  html5 clips (fondo izq. + texto, body transparent) → texto legible
+// Track 2 (bottom):  image clips del panel derecho → Shotstack fetchea Drive URLs directamente
+// Los `<img>` embebidos dentro de html5 NO funcionan con URLs de Drive porque el headless
+// Chromium de Shotstack no puede cargar esas URLs (auth/redirects). Los image clips de
+// Shotstack SÍ funcionan porque usan su propio HTTP client con soporte de redirects.
+// Cada clip lleva _track (0/1/2) que buildTimeline usa para separar en tracks; se elimina antes de enviar.
 
-function rightPanelImage(start: number, src: string) {
-  // Imagen que LLENA el panel derecho (~960×1080) sin sobre-ampliar: se contiene
-  // (height completa, sin recorte vertical innecesario) y se escala ~1.12 para
-  // cubrir el ancho del panel. Para una imagen 4:5 → llena pleno con ~10% de
-  // recorte (vs ~55% si cubriera todo el cuadro 16:9). Anclada a la derecha.
+function slideHtml5(start: number, innerHtml: string) {
   return {
-    asset: { type: 'image', src },
-    start, length: D,
-    fit: 'contain', position: 'right', offset: { x: 0, y: 0 }, scale: 1.12,
-    transition: { in: 'fade' },
-  };
-}
-
-/** Capa de texto de cuadro completo (1920×1080) centrada 1:1 sobre el frame. */
-function textOverlay(start: number, innerHtml: string) {
-  return {
+    _track: 1,
     asset: {
-      type: 'html',
-      html: `<div style="position:relative;width:1920px;height:1080px;font-family:sans-serif;text-align:left">${innerHtml}</div>`,
-      width: 1920, height: 1080,
+      type: 'html5',
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;width:1920px;height:1080px;overflow:hidden;font-family:sans-serif;text-align:left;background:transparent;position:relative}</style></head><body>${innerHtml}</body></html>`,
     },
     start, length: D, position: 'center', offset: { x: 0, y: 0 },
     transition: { in: 'fade' },
@@ -201,77 +217,97 @@ function textOverlay(start: number, innerHtml: string) {
 
 function logoCorner(start: number, logoUrl: string) {
   return {
+    _track: 0,
     asset: { type: 'image', src: logoUrl },
     start, length: D,
     position: 'topLeft', offset: { x: 0.02, y: -0.045 },
-    scale: 0.13, // logo más grande (≈ alto 120px en 1080)
+    scale: 0.13,
   };
 }
 
-// ── Slide builders (clips Shotstack) ─────────────────────────────────────────────
+// Panel derecho: clip de imagen en track 2 (debajo del html5).
+// Shotstack fetchea la URL de Drive con su HTTP client — no falla como en <img> dentro de html5.
+// width/height = caja de 960×1080 (mitad derecha, casi 4:5). fit:'cover' llena esa caja con
+// recorte mínimo (no se estira a 16:9 como cuando cubría el frame entero). position:'right'
+// la ancla al borde derecho. transition fade: mismo fundido que el texto del html5.
+function rightPanelClip(start: number, imgUrl: string) {
+  return {
+    _track: 2,
+    asset: { type: 'image', src: imgUrl },
+    start, length: D,
+    width: 960, height: 1080,
+    fit: 'cover',
+    position: 'right',
+    transition: { in: 'fade' },
+  };
+}
 
-function buildPortadaSlide(project: Project, start: number) {
+// ── Slide builders (clips Shotstack, multi-track) ────────────────────────────────
+// Cada slide devuelve hasta 3 clips etiquetados con _track (0/1/2).
+// buildTimeline separa los clips por _track y construye las tracks correctas.
+
+function buildPortadaSlide(project: Project, start: number): unknown[] {
   const { identity, media, slots } = project;
   const { colors } = identity;
   const slot = slots.find(s => s.id === 'SLOT_01');
-  const clips: unknown[] = [];
   const pm = media['portada_img'];
   const imgUrl = normalizeDriveUrl(pm?.url);
   const isVideo = pm?.type === 'video';
+  const logoUrl = isValidAssetUrl(identity.logoUrl) ? normalizeDriveUrl(identity.logoUrl) : null;
 
-  // Portada propia: media (imagen o video) a sangre completa, sin overlay ni logo.
+  // Portada custom: imagen/video a sangre + logo corner encima.
   if (project.portadaMode === 'custom' && isValidAssetUrl(imgUrl)) {
-    clips.push({ asset: { type: isVideo ? 'video' : 'image', src: imgUrl }, start, length: D, position: 'center', offset: { x: 0, y: 0 } });
-    return clips;
+    return [
+      { _track: 1, asset: { type: isVideo ? 'video' : 'image', src: imgUrl }, start, length: D, position: 'center', offset: { x: 0, y: 0 } },
+      logoUrl ? logoCorner(start, logoUrl) : null,
+    ].filter(Boolean);
   }
 
-  // Plantilla diseñada: fondo (imagen o color) + overlay con título/subtítulo + logo.
+  // Plantilla: html5 con fondo + overlay + título; logo como clip separado (track 0).
   const title = (slot?.fields.title as string) || 'Prevención de Riesgos';
   const subtitle = (slot?.fields.subtitle as string) || '';
-  if (isValidAssetUrl(imgUrl) && !isVideo) {
-    clips.push({ asset: { type: 'image', src: imgUrl }, start, length: D, position: 'center', offset: { x: 0, y: 0 } });
-  } else {
-    clips.push(bgClip(start, colors.background));
-  }
-  clips.push(textOverlay(start, portadaInner(title, subtitle, colors)));
-  if (isValidAssetUrl(identity.logoUrl)) clips.push(logoCorner(start, normalizeDriveUrl(identity.logoUrl)!));
-  return clips;
+  const bgImg = (isValidAssetUrl(imgUrl) && !isVideo) ? imgUrl : null;
+  return [
+    slideHtml5(start, portadaInner(title, subtitle, colors, bgImg)),
+    logoUrl ? logoCorner(start, logoUrl) : null,
+  ].filter(Boolean);
 }
 
-function buildRiskSlide(project: Project, rm: RiskSubModule, start: number) {
+function buildRiskSlide(project: Project, rm: RiskSubModule, start: number): unknown[] {
   const { identity, media } = project;
   const { colors } = identity;
   const imgUrl = normalizeDriveUrl(media[rm.mediaId]?.url);
-  const clips: unknown[] = [];
   const hasImg = isValidAssetUrl(imgUrl);
-
-  clips.push(bgClip(start, colors.background));
-  if (hasImg) clips.push(rightPanelImage(start, imgUrl));
-  clips.push(textOverlay(start, riskInner(rm, colors, hasImg)));
-  if (isValidAssetUrl(identity.logoUrl)) clips.push(logoCorner(start, normalizeDriveUrl(identity.logoUrl)!));
-  return clips;
+  const logoUrl = isValidAssetUrl(identity.logoUrl) ? normalizeDriveUrl(identity.logoUrl) : null;
+  return [
+    slideHtml5(start, riskInner(rm, colors, hasImg, null)),   // imgUrl=null: no <img> en html5
+    logoUrl ? logoCorner(start, logoUrl) : null,               // track 0: logo encima
+    hasImg ? rightPanelClip(start, imgUrl!) : null,            // track 2: imagen abajo
+  ].filter(Boolean);
 }
 
-function buildGenericSlide(project: Project, slotId: string, start: number) {
+function buildGenericSlide(project: Project, slotId: string, start: number): unknown[] {
   const { identity, media, slots } = project;
   const { colors } = identity;
   const slot = slots.find(s => s.id === slotId);
   if (!slot) return [];
 
-  const clips: unknown[] = [];
   const title = (slot.fields.title as string) || slot.title;
   const mediaKey = slotId === 'SLOT_01' ? 'portada_img'
     : slotId === 'SLOT_02' ? 'objetivos_img'
     : `${slotId.toLowerCase()}_img`;
   const imgUrl = normalizeDriveUrl(media[mediaKey]?.url ?? null);
   const hasImg = isValidAssetUrl(imgUrl);
-
-  clips.push(bgClip(start, colors.background));
-  if (hasImg && imgUrl) clips.push(rightPanelImage(start, imgUrl));
-  const inner = slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg);
-  clips.push(textOverlay(start, inner));
-  if (isValidAssetUrl(identity.logoUrl)) clips.push(logoCorner(start, normalizeDriveUrl(identity.logoUrl)!));
-  return clips;
+  const logoUrl = isValidAssetUrl(identity.logoUrl) ? normalizeDriveUrl(identity.logoUrl) : null;
+  const isSlot10 = slotId === 'SLOT_10';
+  const inner = isSlot10
+    ? cierreInner(slot.fields, colors)
+    : genericInner(title, slot.fields, colors, hasImg, null);  // imgUrl=null: no <img> en html5
+  return [
+    slideHtml5(start, inner),
+    logoUrl ? logoCorner(start, logoUrl) : null,
+    !isSlot10 && hasImg ? rightPanelClip(start, imgUrl!) : null,
+  ].filter(Boolean);
 }
 
 // ── Aplanado de slides activos (orden + audio) ───────────────────────────────────
@@ -284,20 +320,14 @@ type SlideUnit = {
   audioUrl: string | null;
 };
 
-function slideUnits(project: Project): SlideUnit[] {
+export function slideUnits(project: Project): SlideUnit[] {
   const { slots, voiceAudioUrls, identity } = project;
   const { colors } = identity;
   const logoUrl = normalizeDriveUrl(identity.logoUrl);
   const units: SlideUnit[] = [];
 
-  // Frame HTML de cuadro completo para la vista previa (mismo layout que el render).
-  // Imagen a sangre completa (portada 16:9 y panel derecho de los slides).
-  const fullBleedImg = (src: string) =>
-    `<img src="${previewSrc(src)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" />`;
-  // Imagen cubriendo solo el panel derecho (50% del ancho, 100% del alto).
-  // 4:5 → llena pleno con ~10% de recorte (no ~55% como a sangre completa 16:9).
-  const rightPanelPreview = (src: string) =>
-    `<img src="${previewSrc(src)}" style="position:absolute;right:0;top:0;width:50%;height:100%;object-fit:cover" />`;
+  // Las imágenes (portada bg + panel derecho) van embebidas dentro de las inner
+  // functions, igual que en el render Shotstack. No se usan helpers separados.
   const logoImg = isValidAssetUrl(logoUrl)
     ? `<img src="${previewSrc(logoUrl)}" style="position:absolute;left:40px;top:44px;height:118px;object-fit:contain;object-position:left" />`
     : '';
@@ -325,7 +355,7 @@ function slideUnits(project: Project): SlideUnit[] {
         build: (start) => buildPortadaSlide(project, start),
         previewHtml: () => custom
           ? customHtml()
-          : frame((isValidAssetUrl(imgUrl) && !isVideo ? fullBleedImg(imgUrl) : '') + portadaInner(title, subtitle, colors)),
+          : frame(portadaInner(title, subtitle, colors, isValidAssetUrl(imgUrl) && !isVideo ? previewSrc(imgUrl) : null)),
         audioUrl: normalizeDriveUrl(voiceAudioUrls?.[slot.id]),
       });
     } else if (slot.id === 'SLOT_08' && slot.riskModules) {
@@ -336,7 +366,7 @@ function slideUnits(project: Project): SlideUnit[] {
           id: rm.id,
           title: rm.name,
           build: (start) => buildRiskSlide(project, rm, start),
-          previewHtml: () => frame((hasImg ? rightPanelPreview(imgUrl!) : '') + riskInner(rm, colors, hasImg)),
+          previewHtml: () => frame(riskInner(rm, colors, hasImg, hasImg ? previewSrc(imgUrl!) : null)),
           audioUrl: normalizeDriveUrl(voiceAudioUrls?.[rm.id]),
         });
       }
@@ -350,7 +380,7 @@ function slideUnits(project: Project): SlideUnit[] {
         id: slot.id,
         title,
         build: (start) => buildGenericSlide(project, slotId, start),
-        previewHtml: () => frame((hasImg ? rightPanelPreview(imgUrl!) : '') + (slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg))),
+        previewHtml: () => frame(slotId === 'SLOT_10' ? cierreInner(slot.fields, colors) : genericInner(title, slot.fields, colors, hasImg, hasImg ? previewSrc(imgUrl!) : null)),
         audioUrl: normalizeDriveUrl(voiceAudioUrls?.[slot.id]),
       });
     }
@@ -360,8 +390,25 @@ function slideUnits(project: Project): SlideUnit[] {
 
 // ── Timeline (render Shotstack) ──────────────────────────────────────────────────
 
-const SLIDE_TAIL = 0.8; // cola de silencio tras la voz (s)
-const SLIDE_MIN = 4;    // duración mínima de un slide (s)
+const SLIDE_TAIL = 0.8;
+const SLIDE_MIN = 4;
+
+/**
+ * Separa clips por su propiedad `_track` (0/1/2) y elimina esa propiedad antes
+ * de enviar a Shotstack. Devuelve un Map<trackIndex, clips[]> ordenado.
+ */
+export function separateByTrack(clips: unknown[]): Map<number, unknown[]> {
+  const map = new Map<number, unknown[]>();
+  for (const clip of clips) {
+    const c = clip as Record<string, unknown>;
+    const idx = typeof c._track === 'number' ? c._track : 1;
+    const { _track, ...clean } = c;
+    void _track;
+    if (!map.has(idx)) map.set(idx, []);
+    map.get(idx)!.push(clean);
+  }
+  return map;
+}
 
 export async function buildTimeline(project: Project) {
   const { identity } = project;
@@ -385,15 +432,22 @@ export async function buildTimeline(project: Project) {
     offset += len;
   });
 
-  const tracks: unknown[] = [{ clips: allClips.filter(Boolean) }];
+  // Multi-track: track 0 (logos), track 1 (html5), track 2 (panel images)
+  const trackMap = separateByTrack(allClips.filter(Boolean));
+  const visualTracks = [...trackMap.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .filter(([, cs]) => cs.length > 0)
+    .map(([, cs]) => ({ clips: cs }));
+  const tracks: unknown[] = [...visualTracks];
   if (audioClips.length > 0) tracks.push({ clips: audioClips });
 
   const timeline: Record<string, unknown> = { background: identity.colors.background, tracks };
   return { timeline, totalDuration: offset };
 }
 
-// Salida del video: MP4 16:9. 'hd' es el valor probado que funciona en el render.
-export const OUTPUT = { format: 'mp4', resolution: 'hd', aspectRatio: '16:9', fps: 25 } as const;
+// Salida del video: MP4 16:9 1920×1080. 'fhd' coincide con el canvas HTML (1920×1080).
+// 'hd' era 1280×720 → el canvas quedaba desplazado 320px y el layout se cortaba.
+export const OUTPUT = { format: 'mp4', resolution: '1080', aspectRatio: '16:9', fps: 25 } as const;
 
 /** Objeto Edit completo { timeline, output } que consume Shotstack. */
 export async function buildEdit(project: Project) {
@@ -404,7 +458,7 @@ export async function buildEdit(project: Project) {
 /** Devuelve las URLs de asset que NO son http/https (no deberían existir; diagnóstico claro). */
 export function collectInvalidAssetUrls(timeline: { tracks?: unknown }): string[] {
   const bad: string[] = [];
-  const tracks = (timeline.tracks as Array<{ clips?: Array<{ asset?: { src?: string } }> }>) ?? [];
+  const tracks = (timeline.tracks as Array<{ clips?: Array<{ asset?: { src?: string; html?: string } }> }>) ?? [];
   for (const t of tracks) {
     for (const c of t.clips ?? []) {
       const src = c.asset?.src;
