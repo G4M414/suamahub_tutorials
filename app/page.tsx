@@ -99,15 +99,30 @@ export default function Home() {
   const slot08 = project.slots.find(s => s.id === 'SLOT_08');
   const activeRiskModules = slot08?.active ? (slot08.riskModules?.filter(rm => rm.active) || []) : [];
 
-  // Mismos placeholders que la pantalla de Medios (Portada + Objetivos +
-  // Obligaciones/SLOT_03B + 1 por riesgo activo), para que el conteo coincida.
-  const isSlot02Active  = project.slots.find(s => s.id === 'SLOT_02')?.active;
-  const isSlot03BActive = project.slots.find(s => s.id === 'SLOT_03B')?.active;
+  // Misma lógica que la página de Medios: todos los placeholders (Visual 1/2/3)
+  // por cada slot activo, más los riesgos. Portada = 1 visual; resto = hasta 3.
+  const VISUALS_PER_SLOT = 3;
+  const slotBaseKey = (slotId: string) =>
+    slotId === 'SLOT_01' ? 'portada_img'
+    : slotId === 'SLOT_02' ? 'objetivos_img'
+    : `${slotId.toLowerCase()}_img`;
+
   const requiredMediaIds: string[] = [];
-  if (isSlot01Active)  requiredMediaIds.push('portada_img');
-  if (isSlot02Active)  requiredMediaIds.push('objetivos_img');
-  if (isSlot03BActive) requiredMediaIds.push('slot_03b_img');
-  activeRiskModules.forEach(rm => requiredMediaIds.push(rm.mediaId));
+  for (const slot of project.slots.filter(s => s.active)) {
+    if (slot.id === 'SLOT_08') {
+      activeRiskModules.forEach(rm => {
+        for (let k = 1; k <= VISUALS_PER_SLOT; k++) {
+          requiredMediaIds.push(k === 1 ? rm.mediaId : `${rm.mediaId}_${k}`);
+        }
+      });
+    } else {
+      const base = slotBaseKey(slot.id);
+      const count = slot.id === 'SLOT_01' ? 1 : VISUALS_PER_SLOT;
+      for (let k = 1; k <= count; k++) {
+        requiredMediaIds.push(k === 1 ? base : `${base}_${k}`);
+      }
+    }
+  }
 
   const totalMediaRequired = requiredMediaIds.length;
   const totalMediaUploaded = requiredMediaIds.filter(id => project.media[id]?.url !== null).length;

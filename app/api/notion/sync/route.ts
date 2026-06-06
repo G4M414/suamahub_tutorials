@@ -237,6 +237,17 @@ async function upsertCliente(project: Project): Promise<string> {
   return data.id;
 }
 
+// Junta las URLs http de los visuales de un módulo (base, _2, _3), en orden, hasta 3.
+// Misma convención que el timeline (slotBaseMediaKey + visualKeys).
+function collectVisualUrls(media: Record<string, { url?: string | null }>, baseKey: string): string[] {
+  const urls: string[] = [];
+  for (const k of [baseKey, `${baseKey}_2`, `${baseKey}_3`]) {
+    const u = media[k]?.url;
+    if (typeof u === 'string' && u.startsWith('http')) urls.push(u);
+  }
+  return urls;
+}
+
 // Normaliza el nombre de módulo para emparejar filas de forma robusta,
 // insensible a mayúsculas/espacios. Evita los duplicados por "drift" de casing
 // (p. ej. "Productos químicos" vs "Productos Químicos").
@@ -260,7 +271,9 @@ async function archivePage(pageId: string): Promise<void> {
 // Puntaje de completitud de una fila: para elegir qué copia conservar si hay duplicados.
 function rowScore(props: Record<string, any>): number {
   let s = 0;
-  if (props['Link Drive']?.url) s += 4;
+  if (props['Link Drive - @img #1']?.url) s += 4;
+  if (props['Link Drive - @img #2']?.url) s += 1;
+  if (props['Link Drive - @img #3']?.url) s += 1;
   if (props['Audio (Drive URL)']?.url) s += 2;
   if (props['Link MP4 (Drive)']?.url) s += 4;
   if ((props['Contenido']?.rich_text ?? []).length) s += 1;
@@ -328,7 +341,7 @@ async function upsertAssetRow(
   clientName: string,
   tutorialLabel: string,
   moduleName: string,
-  driveUrl: string,
+  driveUrls: string[],
   estado: string,
   tipo: string,
   contenido: string = '',
@@ -344,7 +357,12 @@ async function upsertAssetRow(
     'Módulo':              { multi_select: [{ name: moduleName.replace(/,/g, ' ·') }] },
     'Fecha de generación': { date: { start: new Date().toISOString().split('T')[0] } },
   };
-  if (driveUrl) properties['Link Drive'] = { url: driveUrl };
+  // Hasta 3 visuales del carrusel → columnas Notion reales del cliente.
+  // Las que no tienen valor se setean a null para limpiar links viejos al reemplazar.
+  const COLS = ['Link Drive - @img #1', 'Link Drive - @img #2', 'Link Drive - @img #3'];
+  COLS.forEach((col, k) => {
+    properties[col] = driveUrls[k] ? { url: driveUrls[k] } : { url: null };
+  });
   if (audioUrl) properties['Audio (Drive URL)'] = { url: audioUrl };
   // Usar chunkRichText para no truncar: guarda TODO el JSON sin límite de 2000 chars
   if (contenido) properties['Contenido'] = { rich_text: chunkRichText(contenido) };
@@ -421,33 +439,31 @@ async function upsertProyectos(
 
   for (const slot of project.slots.filter(s => s.active && s.id !== 'SLOT_08')) {
     const moduleName = slot.title;
-    const mediaId = slot.id === 'SLOT_01' ? 'portada_img'
+    const baseKey = slot.id === 'SLOT_01' ? 'portada_img'
                   : slot.id === 'SLOT_02' ? 'objetivos_img'
-                  : null;
-    const mediaItem = mediaId ? project.media[mediaId] : null;
-    const driveUrl = mediaItem?.url?.startsWith('http') ? mediaItem.url : null;
+                  : `${slot.id.toLowerCase()}_img`;
+    const driveUrls = collectVisualUrls(project.media, baseKey);
     const contenido = extractSlotContent(project, slot.id);
     const audioUrl = project.voiceAudioUrls?.[slot.id] ?? '';
 
-    if (!driveUrl && !contenido && !audioUrl) continue; // nada que guardar
+    if (driveUrls.length === 0 && !contenido && !audioUrl) continue; // nada que guardar
 
     await upsertAssetRow(
       existing, clientId, clientName, tutorialLabel,
-      moduleName, driveUrl ?? '', estado, tipo, contenido, audioUrl,
+      moduleName, driveUrls, estado, tipo, contenido, audioUrl,
     );
   }
 
   // ── Módulos de riesgo (SLOT_08) ──
   if (slot08?.active) {
     for (const rm of (slot08.riskModules ?? []).filter(r => r.active)) {
-      const mediaItem = project.media[rm.mediaId];
-      const driveUrl = mediaItem?.url?.startsWith('http') ? mediaItem.url : null;
+      const driveUrls = collectVisualUrls(project.media, rm.mediaId);
       const contenido = extractRiskContent(rm, project.voiceScript);
       const audioUrl = project.voiceAudioUrls?.[rm.id] ?? '';
-      if (!driveUrl && !contenido && !audioUrl) continue;
+      if (driveUrls.length === 0 && !contenido && !audioUrl) continue;
       await upsertAssetRow(
         existing, clientId, clientName, tutorialLabel,
-        rm.name, driveUrl ?? '', estado, tipo, contenido, audioUrl,
+        rm.name, driveUrls, estado, tipo, contenido, audioUrl,
       );
     }
   }

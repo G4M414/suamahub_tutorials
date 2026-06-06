@@ -44,6 +44,47 @@ const MOCK_ASSETS_MAP: Record<string, { type: 'image' | 'video'; url: string; pr
     url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop&q=80',
     prompt: 'Instructor de seguridad laboral impartiendo una charla a un grupo de mozos y personal de hotelería en una sala de conferencias.'
   },
+  // Slots de contenido (visuales acordes al texto de cada escena).
+  slot_03_img: {
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Libros de leyes y código legal sobre un escritorio, balanza de la justicia, ambiente formal de normativa y legislación laboral.'
+  },
+  slot_03b_img: {
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Apretón de manos entre empleador y trabajador, concepto de responsabilidad compartida y derechos laborales.'
+  },
+  slot_04_img: {
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1454165833767-3a4f1c2b3b9c?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Diagrama tipo pirámide de seguridad y conceptos clave, infografía limpia sobre accidentes e incidentes.'
+  },
+  slot_05_img: {
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Persona analizando indicadores económicos y de gestión, gráficos de reducción de costos y reputación empresarial.'
+  },
+  slot_06_img: {
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Equipo de trabajo comprometido con la seguridad, casco y elementos de protección, principios de prevención.'
+  },
+  slot_07_img: {
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Organigrama de roles y gestión de la prevención, reunión de coordinación de equipo de seguridad e higiene.'
+  },
+  slot_09_img: {
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Trabajadores aplicando buenas prácticas de seguridad, recomendaciones finales, ambiente laboral seguro y ordenado.'
+  },
+  slot_10_img: {
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&auto=format&fit=crop&q=80',
+    prompt: 'Cierre institucional, equipo de trabajo unido y seguro, fondo corporativo cálido para mensaje final de agradecimiento.'
+  },
   media_08a: {
     type: 'image',
     url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
@@ -109,37 +150,48 @@ export default function ImagenesyVideos() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // La portada va a pantalla completa (16:9); el resto ocupa el panel derecho del
-  // split a sangre completa → recomendado 1:1 (llena el panel con recorte parejo).
-  const getAspectRatio = (id: string) => id === 'portada_img' ? '16:9' : '1:1';
-  const getAspectLabel = (id: string) => id === 'portada_img' ? '16:9 — pantalla completa' : '4:5 ideal (genera 1:1 con IA, sube 4:5 manual)';
+  // Portada y Cierre van a pantalla completa (16:9). El resto ocupa el panel lateral
+  // (media pantalla) → recomendado 4:5/1:1 (llena el panel con recorte parejo).
+  const isFullBleed = (id: string) => id.startsWith('portada_img') || id.startsWith('slot_10_img');
+  const getAspectRatio = (id: string) => isFullBleed(id) ? '16:9' : '1:1';
+  const getAspectLabel = (id: string) => isFullBleed(id) ? '16:9 — pantalla completa' : '4:5 ideal (panel lateral; genera 1:1 con IA)';
 
-  // Obtener placeholders requeridos dinámicamente según slots activos
+  // Hasta 3 visuales por slot: van rotando durante la voz en off (carrusel).
+  // Visual 1 = clave base (compatibilidad con datos viejos); 2 y 3 = `${base}_2/_3`.
+  const VISUALS_PER_SLOT = 3;
+
+  // Clave base de media por slot (mismo criterio que el timeline: slotBaseMediaKey).
+  const slotBaseKey = (slotId: string) =>
+    slotId === 'SLOT_01' ? 'portada_img'
+    : slotId === 'SLOT_02' ? 'objetivos_img'
+    : `${slotId.toLowerCase()}_img`;
+
+  // Obtener placeholders requeridos dinámicamente según slots activos.
+  // Por cada slot de contenido se generan 3 entradas (Visual 1/2/3).
   const requiredPlaceholders: { id: string; name: string; type: 'image' | 'video' }[] = [];
 
-  const isSlot01Active  = project.slots.find(s => s.id === 'SLOT_01')?.active;
-  const isSlot02Active  = project.slots.find(s => s.id === 'SLOT_02')?.active;
-  const isSlot03BActive = project.slots.find(s => s.id === 'SLOT_03B')?.active;
-  const slot08 = project.slots.find(s => s.id === 'SLOT_08');
-  const activeRiskModules = slot08?.active ? (slot08.riskModules?.filter(rm => rm.active) || []) : [];
+  const pushVisuals = (baseId: string, baseName: string, type: 'image' | 'video', count = VISUALS_PER_SLOT) => {
+    for (let k = 1; k <= count; k++) {
+      const id = k === 1 ? baseId : `${baseId}_${k}`;
+      const label = count > 1 ? `${baseName} — Visual ${k}` : baseName;
+      requiredPlaceholders.push({ id, name: label, type });
+    }
+  };
 
-  if (isSlot01Active) {
-    requiredPlaceholders.push({ id: 'portada_img', name: 'Imagen de Portada', type: 'image' });
+  for (const slot of project.slots.filter(s => s.active)) {
+    if (slot.id === 'SLOT_08') {
+      const risks = slot.riskModules?.filter(rm => rm.active) ?? [];
+      risks.forEach(rm => pushVisuals(rm.mediaId, `Riesgo: ${rm.name}`, rm.videoUrl ? 'video' : 'image'));
+    } else {
+      const name = slot.id === 'SLOT_01' ? 'Portada'
+                 : slot.id === 'SLOT_10' ? 'Cierre'
+                 : (slot.title || slot.id);
+      // Portada y Cierre: 1 solo placeholder (full-bleed, imagen o video propio, sin
+      // carrusel). Resto: hasta 3 visuales.
+      const count = (slot.id === 'SLOT_01' || slot.id === 'SLOT_10') ? 1 : VISUALS_PER_SLOT;
+      pushVisuals(slotBaseKey(slot.id), name, 'image', count);
+    }
   }
-  if (isSlot02Active) {
-    requiredPlaceholders.push({ id: 'objetivos_img', name: 'Imagen de Objetivos', type: 'image' });
-  }
-  if (isSlot03BActive) {
-    requiredPlaceholders.push({ id: 'slot_03b_img', name: 'Obligaciones y Derechos (imagen)', type: 'image' });
-  }
-  
-  activeRiskModules.forEach(rm => {
-    requiredPlaceholders.push({ 
-      id: rm.mediaId, 
-      name: `Riesgo: ${rm.name}`, 
-      type: rm.videoUrl ? 'video' : 'image' 
-    });
-  });
 
   const selectedItemInfo = requiredPlaceholders.find(p => p.id === selectedPlaceholder);
   const currentMediaState = project.media[selectedPlaceholder] || {
@@ -153,7 +205,9 @@ export default function ImagenesyVideos() {
   // Sincronizar prompt y driveUrl por defecto según el placeholder
   React.useEffect(() => {
     if (selectedPlaceholder) {
-      const mockData = MOCK_ASSETS_MAP[selectedPlaceholder] || { prompt: 'Fotografía realista en alta calidad...' };
+      // Para los visuales 2 y 3 (`${base}_2/_3`) usamos el prompt/default de la clave base.
+      const baseKey = selectedPlaceholder.replace(/_(2|3)$/, '');
+      const mockData = MOCK_ASSETS_MAP[selectedPlaceholder] || MOCK_ASSETS_MAP[baseKey] || { prompt: 'Fotografía realista en alta calidad...' };
       setAiPrompt(currentMediaState.aiPrompt || mockData.prompt);
       // Mostrar la URL de Drive si ya existe
       if (currentMediaState.source === 'upload' && currentMediaState.url?.startsWith('http')) {
