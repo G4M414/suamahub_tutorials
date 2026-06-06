@@ -80,6 +80,9 @@ export interface Project {
   // Portada: 'template' = diseño SUAMA (título+logo sobre fondo);
   //          'custom'   = imagen/video propio a pantalla completa, sin overlay.
   portadaMode?: 'template' | 'custom';
+  // Cierre (igual que la portada): 'template' = diseño con mensaje/logo;
+  //          'custom'   = imagen/video propio a pantalla completa, sin overlay.
+  cierreMode?: 'template' | 'custom';
   identity: ClientIdentity;
   slots: Slot[];
   media: Record<string, MediaItem>; // maps placeholderId -> MediaItem

@@ -75,11 +75,13 @@ export async function GET(req: NextRequest) {
     const data = await res.json();
 
     const assets: Record<string, {
-      linkDrive: string | null;
+      linkDrive: string | null;        // back-compat: primer visual
+      linkDrives: string[];            // hasta 3 visuales del carrusel
       audioUrl: string | null;
       voiceScript: string | null;
       slotFields: Record<string, unknown> | null;
-      kind?: DriveKind;
+      kind?: DriveKind;                // back-compat: kind del primer visual
+      kinds?: (DriveKind | undefined)[]; // kind de cada visual
     }> = {};
 
     for (const page of (data.results ?? []) as Array<Record<string, unknown>>) {
@@ -97,8 +99,14 @@ export async function GET(req: NextRequest) {
       if (!moduleName && matchesTitle) moduleName = title.slice(prefix.length).trim();
       if (!moduleName || moduleName === 'MP4 Final') continue;
 
-      // Link del asset: 'Link Drive' (app) o 'Carpeta de assets (Drive)' (manual)
-      const linkDrive = readUrl(props, 'Link Drive') ?? readUrl(props, 'Carpeta de assets (Drive)');
+      // Links del carrusel: columnas reales de Notion.
+      // Fallback al primer visual: 'Carpeta de assets (Drive)' (carga manual antigua).
+      const linkDrives = [
+        readUrl(props, 'Link Drive - @img #1') ?? readUrl(props, 'Carpeta de assets (Drive)'),
+        readUrl(props, 'Link Drive - @img #2'),
+        readUrl(props, 'Link Drive - @img #3'),
+      ].filter((u): u is string => !!u);
+      const linkDrive = linkDrives[0] ?? null;
       const audioUrl = readUrl(props, 'Audio (Drive URL)');
 
       // Contenido: puede ser JSON (nuevo formato) o texto legible (formato viejo).
@@ -127,8 +135,8 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      if (!linkDrive && !audioUrl && !voiceScript && !slotFields) continue;
-      assets[moduleName] = { linkDrive, audioUrl, voiceScript, slotFields };
+      if (linkDrives.length === 0 && !audioUrl && !voiceScript && !slotFields) continue;
+      assets[moduleName] = { linkDrive, linkDrives, audioUrl, voiceScript, slotFields };
     }
 
     // Detectar el tipo real (imagen/video) de cada Link Drive desde Drive, así el
@@ -137,13 +145,18 @@ export async function GET(req: NextRequest) {
     // si Drive falla para alguno, ese asset queda sin kind y el store usa el default.
     await Promise.all(
       Object.values(assets).map(async (a) => {
-        const id = driveFileId(a.linkDrive);
-        if (!id) return;
-        try {
-          a.kind = await detectDriveKind(id);
-        } catch {
-          /* sin kind: el store conserva el type existente o usa 'image' */
-        }
+        a.kinds = await Promise.all(
+          a.linkDrives.map(async (url) => {
+            const id = driveFileId(url);
+            if (!id) return undefined;
+            try {
+              return await detectDriveKind(id);
+            } catch {
+              return undefined; // sin kind: el store conserva el type existente o usa 'image'
+            }
+          })
+        );
+        a.kind = a.kinds[0]; // back-compat: kind del primer visual
       })
     );
 

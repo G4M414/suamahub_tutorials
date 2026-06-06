@@ -288,6 +288,17 @@ export const mockProjectTutorial01: Project = {
       url: null,
       fileName: 'default_portada.jpg',
     },
+    // Visual base (Visual 1) por cada slot de contenido. Los visuales 2 y 3
+    // (`${base}_2`, `${base}_3`) los crea la UI de Medios al pegar más URLs.
+    'objetivos_img': { id: 'media_objetivos', placeholderId: 'objetivos_img', type: 'image', source: 'upload', url: null },
+    'slot_03_img':  { id: 'media_slot_03',  placeholderId: 'slot_03_img',  type: 'image', source: 'upload', url: null },
+    'slot_03b_img': { id: 'media_slot_03b', placeholderId: 'slot_03b_img', type: 'image', source: 'upload', url: null },
+    'slot_04_img':  { id: 'media_slot_04',  placeholderId: 'slot_04_img',  type: 'image', source: 'upload', url: null },
+    'slot_05_img':  { id: 'media_slot_05',  placeholderId: 'slot_05_img',  type: 'image', source: 'upload', url: null },
+    'slot_06_img':  { id: 'media_slot_06',  placeholderId: 'slot_06_img',  type: 'image', source: 'upload', url: null },
+    'slot_07_img':  { id: 'media_slot_07',  placeholderId: 'slot_07_img',  type: 'image', source: 'upload', url: null },
+    'slot_09_img':  { id: 'media_slot_09',  placeholderId: 'slot_09_img',  type: 'image', source: 'upload', url: null },
+    'slot_10_img':  { id: 'media_slot_10',  placeholderId: 'slot_10_img',  type: 'image', source: 'upload', url: null },
     'media_08a': { id: 'media_08a_default', placeholderId: 'media_08a', type: 'image', source: 'upload', url: null },
     'media_08b': { id: 'media_08b_default', placeholderId: 'media_08b', type: 'image', source: 'upload', url: null },
     'media_08c': { id: 'media_08c_default', placeholderId: 'media_08c', type: 'image', source: 'upload', url: null },
@@ -500,6 +511,14 @@ export const mockProjectTutorial02: Project = {
       url: null,
       fileName: 'default_portada_fire.jpg',
     },
+    // Visual base (Visual 1) por slot de contenido activo del tutorial 02.
+    // SLOT_04 y SLOT_05 están inactivos en este tutorial → sin placeholder.
+    'objetivos_img': { id: 'media_objetivos_02', placeholderId: 'objetivos_img', type: 'image', source: 'upload', url: null },
+    'slot_03_img':  { id: 'media_slot_03_02',  placeholderId: 'slot_03_img',  type: 'image', source: 'upload', url: null },
+    'slot_06_img':  { id: 'media_slot_06_02',  placeholderId: 'slot_06_img',  type: 'image', source: 'upload', url: null },
+    'slot_07_img':  { id: 'media_slot_07_02',  placeholderId: 'slot_07_img',  type: 'image', source: 'upload', url: null },
+    'slot_09_img':  { id: 'media_slot_09_02',  placeholderId: 'slot_09_img',  type: 'image', source: 'upload', url: null },
+    'slot_10_img':  { id: 'media_slot_10_02',  placeholderId: 'slot_10_img',  type: 'image', source: 'upload', url: null },
     'media_08a_fire': { id: 'media_08a_fire_default', placeholderId: 'media_08a_fire', type: 'image', source: 'upload', url: null },
     'media_08b_fire': { id: 'media_08b_fire_default', placeholderId: 'media_08b_fire', type: 'image', source: 'upload', url: null },
     'media_08c_fire': { id: 'media_08c_fire_default', placeholderId: 'media_08c_fire', type: 'image', source: 'upload', url: null },

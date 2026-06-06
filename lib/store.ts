@@ -12,7 +12,8 @@ interface ProjectStore {
   setCompanyName: (name: string) => void;
   setIndustry: (industry: string) => void;
   setPortadaMode: (mode: 'template' | 'custom') => void;
-  
+  setCierreMode: (mode: 'template' | 'custom') => void;
+
   // Identity
   updateColors: (colors: Partial<ColorPalette>) => void;
   updateFont: (font: string) => void;
@@ -22,10 +23,12 @@ interface ProjectStore {
   loadProjectState: (state: Partial<Project>) => void;
   applyNotionAssets: (assets: Record<string, {
     linkDrive: string | null;
+    linkDrives?: string[];
     audioUrl: string | null;
     voiceScript?: string | null;
     slotFields?: Record<string, unknown> | null;
     kind?: 'image' | 'video' | 'other';
+    kinds?: ('image' | 'video' | 'other' | undefined)[];
   }>) => void;
   clearClientAssets: () => void;
   
@@ -81,6 +84,11 @@ export const useProjectStore = create<ProjectStore>()(
       setPortadaMode: (mode) =>
         set((state) => ({
           project: { ...state.project, portadaMode: mode },
+        })),
+
+      setCierreMode: (mode) =>
+        set((state) => ({
+          project: { ...state.project, cierreMode: mode },
         })),
         
       updateColors: (colors) =>
@@ -183,12 +191,28 @@ export const useProjectStore = create<ProjectStore>()(
               : { id: `media_${placeholderId}_${Date.now()}`, placeholderId, type, source: 'upload', url };
           };
 
+          // Mapea los hasta 3 visuales (linkDrives) del módulo a las claves
+          // base / base_2 / base_3, con el kind detectado de cada uno.
+          const setVisuals = (
+            baseKey: string,
+            a: { linkDrive: string | null; linkDrives?: string[]; kind?: 'image'|'video'|'other'; kinds?: ('image'|'video'|'other'|undefined)[] },
+          ) => {
+            const urls = (a.linkDrives && a.linkDrives.length > 0)
+              ? a.linkDrives
+              : (a.linkDrive ? [a.linkDrive] : []);
+            urls.forEach((url, k) => {
+              const key = k === 0 ? baseKey : `${baseKey}_${k + 1}`;
+              const kind = a.kinds?.[k] ?? (k === 0 ? a.kind : undefined);
+              setMedia(key, url, kind);
+            });
+          };
+
           const slots = state.project.slots.map(slot => {
             if (slot.id === 'SLOT_08' && slot.riskModules) {
               const riskModules = slot.riskModules.map(rm => {
                 const a = assets[rm.name];
                 if (!a) return rm;
-                if (a.linkDrive) setMedia(rm.mediaId, a.linkDrive, a.kind);
+                setVisuals(rm.mediaId, a);
                 if (a.audioUrl) voiceAudioUrls[rm.id] = a.audioUrl;
                 if (a.voiceScript) voiceScript[rm.id] = a.voiceScript;
                 // Restaurar causes y measures si los guardamos como JSON
@@ -206,10 +230,11 @@ export const useProjectStore = create<ProjectStore>()(
             } else {
               const a = assets[slot.title];
               if (!a) return slot;
-              const mediaId = slot.id === 'SLOT_01' ? 'portada_img'
+              // Clave base de media (mismo criterio que el timeline: slotBaseMediaKey).
+              const baseKey = slot.id === 'SLOT_01' ? 'portada_img'
                             : slot.id === 'SLOT_02' ? 'objetivos_img'
-                            : slot.mediaId ?? null;
-              if (mediaId && a.linkDrive) setMedia(mediaId, a.linkDrive, a.kind);
+                            : `${slot.id.toLowerCase()}_img`;
+              setVisuals(baseKey, a);
               if (a.audioUrl) voiceAudioUrls[slot.id] = a.audioUrl;
               if (a.voiceScript) voiceScript[slot.id] = a.voiceScript;
               // Restaurar campos de texto del slot (objectives, laws, definitions, etc.)

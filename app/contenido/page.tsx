@@ -19,8 +19,10 @@ export default function ContenidoTextual() {
     toggleRiskModule,
     updateRiskModule,
     setPortadaMode,
+    setCierreMode,
   } = useProjectStore();
   const portadaMode = project.portadaMode ?? 'template';
+  const cierreMode = project.cierreMode ?? 'template';
 
   const [selectedSlotId, setSelectedSlotId] = useState<string>('SLOT_01');
   const [selectedRiskId, setSelectedRiskId] = useState<string>('08a');
@@ -658,25 +660,55 @@ export default function ContenidoTextual() {
                   {/* Cierre */}
                   {selectedSlot.id === 'SLOT_10' && (
                     <div className="space-y-4">
-                      <TextArea
-                        label="Mensaje de Cierre / Despedida"
-                        value={selectedSlot.fields.closingMessage as string || ''}
-                        onChange={(e) => handleFieldChange('closingMessage', e.target.value)}
-                        placeholder="Ingrese el mensaje de cierre"
-                        rows={3}
-                      />
-                      <Input
-                        label="Dirección Web"
-                        value={selectedSlot.fields.web as string || ''}
-                        onChange={(e) => handleFieldChange('web', e.target.value)}
-                        placeholder="Ej: artprevencionsmg.com.ar"
-                      />
-                      <Input
-                        label="Texto Secundario de Cierre"
-                        value={selectedSlot.fields.brandText as string || ''}
-                        onChange={(e) => handleFieldChange('brandText', e.target.value)}
-                        placeholder="Ej: Sistema de Autoprotección"
-                      />
+                      {/* Toggle: plantilla diseñada vs cierre propio (imagen/video a sangre) */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tipo de cierre</label>
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/60 border border-slate-800 rounded-xl">
+                          <button
+                            type="button"
+                            onClick={() => setCierreMode('template')}
+                            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${cierreMode === 'template' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            Plantilla SUAMA
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCierreMode('custom')}
+                            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${cierreMode === 'custom' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            Cierre propio
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {cierreMode === 'template'
+                            ? 'Mensaje de cierre + logo sobre el fondo (la imagen va en Imágenes y Videos → cierre).'
+                            : 'Tu imagen o video de cierre a pantalla completa, sin texto encima. Cargá el archivo en Imágenes y Videos → cierre.'}
+                        </p>
+                      </div>
+
+                      {cierreMode === 'template' && (
+                        <>
+                          <TextArea
+                            label="Mensaje de Cierre / Despedida"
+                            value={selectedSlot.fields.closingMessage as string || ''}
+                            onChange={(e) => handleFieldChange('closingMessage', e.target.value)}
+                            placeholder="Ingrese el mensaje de cierre"
+                            rows={3}
+                          />
+                          <Input
+                            label="Dirección Web"
+                            value={selectedSlot.fields.web as string || ''}
+                            onChange={(e) => handleFieldChange('web', e.target.value)}
+                            placeholder="Ej: artprevencionsmg.com.ar"
+                          />
+                          <Input
+                            label="Texto Secundario de Cierre"
+                            value={selectedSlot.fields.brandText as string || ''}
+                            onChange={(e) => handleFieldChange('brandText', e.target.value)}
+                            placeholder="Ej: Sistema de Autoprotección"
+                          />
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
