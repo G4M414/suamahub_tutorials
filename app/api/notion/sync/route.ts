@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Project, RiskSubModule } from '@/lib/types';
+import { getTutorialLabel } from '@/lib/constants';
 import { nfetch } from '@/lib/notion-fetch';
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
@@ -181,7 +182,14 @@ async function findClientByName(name: string): Promise<string | null> {
     method: 'POST', headers: h,
     body: JSON.stringify({ filter: { property: 'Nombre del cliente', title: { equals: name } } }),
   });
-  return (await res.json()).results?.[0]?.id ?? null;
+  const data = await res.json();
+  if (!res.ok) {
+    console.error(`[SYNC] findClientByName FAILED for "${name}":`, JSON.stringify(data));
+    throw new Error(`findClientByName: ${data.message || JSON.stringify(data)}`);
+  }
+  const id = data.results?.[0]?.id ?? null;
+  console.log(`[SYNC] findClientByName("${name}") → ${id ? `FOUND ${id}` : 'NOT FOUND (will create new)'}`);
+  return id;
 }
 
 async function upsertCliente(project: Project): Promise<string> {
@@ -309,7 +317,13 @@ async function indexExistingRows(clientId: string, tutorialLabel: string): Promi
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(`Query Proyectos: ${JSON.stringify(data)}`);
+    if (!res.ok) {
+      if (data?.code === 'validation_error' && data?.message?.includes('not found for property')) {
+        console.log(`[SYNC] Tutorial select option "${tutorialLabel}" no existe en Notion — se creará al guardar`);
+        break;
+      }
+      throw new Error(`Query Proyectos: ${JSON.stringify(data)}`);
+    }
     for (const page of (data.results ?? []) as Array<Record<string, any>>) {
       const key = normKey(rowModuleName(page.properties));
       if (!key) continue;
@@ -370,18 +384,27 @@ async function upsertAssetRow(
   const key = normKey(moduleName);
   const existingId = existing.get(key);
   if (existingId) {
+    // No pisar el Estado de filas existentes con "Borrador" — solo actualizar
+    // si el nuevo estado es "Generado" (post-render). Así un guardado parcial
+    // no degrada filas que ya estaban "Generado".
+    if (estado === 'Borrador') delete properties['Estado'];
+    console.log(`[SYNC] PATCH "${moduleName}" (key="${key}") → pageId=${existingId}`);
     const pr = await nfetch(`${NOTION_BASE}/pages/${existingId}`, {
       method: 'PATCH', headers: h, body: JSON.stringify({ properties }),
     });
-    if (!pr.ok) { const e = await pr.json(); throw new Error(`Asset PATCH ${moduleName}: ${JSON.stringify(e)}`); }
+    const prData = await pr.json();
+    if (!pr.ok) { console.error(`[SYNC] PATCH FAILED "${moduleName}":`, JSON.stringify(prData)); throw new Error(`Asset PATCH ${moduleName}: ${JSON.stringify(prData)}`); }
+    console.log(`[SYNC] PATCH OK "${moduleName}"`);
     return;
   }
+  console.log(`[SYNC] POST NEW "${moduleName}" (key="${key}") → creating in DB ${PROYECTOS_DB}`);
   const res = await nfetch(`${NOTION_BASE}/pages`, {
     method: 'POST', headers: h,
     body: JSON.stringify({ parent: { database_id: PROYECTOS_DB }, properties }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(`Asset POST ${moduleName}: ${JSON.stringify(data)}`);
+  if (!res.ok) { console.error(`[SYNC] POST FAILED "${moduleName}":`, JSON.stringify(data)); throw new Error(`Asset POST ${moduleName}: ${JSON.stringify(data)}`); }
+  console.log(`[SYNC] POST OK "${moduleName}" → newPageId=${data.id}`);
   // Registrar la fila recién creada para no duplicarla dentro de la misma corrida.
   existing.set(key, data.id);
 }
@@ -456,11 +479,15 @@ async function upsertProyectos(
 
   // ── Módulos de riesgo (SLOT_08) ──
   if (slot08?.active) {
-    for (const rm of (slot08.riskModules ?? []).filter(r => r.active)) {
+    const allRisk = (slot08.riskModules ?? []);
+    const activeRisk = allRisk.filter(r => r.active);
+    console.log(`[SYNC] SLOT_08 tiene ${allRisk.length} módulos (${activeRisk.length} activos): ${allRisk.map(r => `${r.id}=${r.name}(${r.active?'ON':'OFF'})`).join(', ')}`);
+    for (const rm of activeRisk) {
       const driveUrls = collectVisualUrls(project.media, rm.mediaId);
       const contenido = extractRiskContent(rm, project.voiceScript);
       const audioUrl = project.voiceAudioUrls?.[rm.id] ?? '';
-      if (driveUrls.length === 0 && !contenido && !audioUrl) continue;
+      console.log(`[SYNC] → ${rm.id} "${rm.name}": driveUrls=${driveUrls.length}, contenido=${contenido.length}chars, audioUrl=${audioUrl ? 'YES' : 'NO'}`);
+      if (driveUrls.length === 0 && !contenido && !audioUrl) { console.log(`[SYNC]   SKIPPED (no data)`); continue; }
       await upsertAssetRow(
         existing, clientId, clientName, tutorialLabel,
         rm.name, driveUrls, estado, tipo, contenido, audioUrl,
@@ -503,8 +530,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     project = body.project as Project;
     mp4Url = body.mp4Url ?? null;
-    tutorialName = body.tutorialName
-      ?? (project.tutorialId === 'tutorial_01' ? 'Tutorial 01 — Riesgos Hoteles' : 'Tutorial 02 — Incendios');
+    tutorialName = body.tutorialName ?? getTutorialLabel(project.tutorialId);
     if (mp4Url) estado = 'Generado';
     else if (body.estado) estado = body.estado;
   } catch {

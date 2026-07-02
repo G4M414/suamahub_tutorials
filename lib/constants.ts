@@ -59,6 +59,38 @@ export const AVAILABLE_FONTS = [
   { id: 'outfit', name: 'Outfit', value: 'var(--font-outfit)' },
 ];
 
+// ── Catálogo de tutoriales ────────────────────────────────────────────────────
+
+export interface TutorialMeta {
+  id: string;
+  name: string;
+  label: string;
+  description: string;
+  structure: 'riesgos' | 'incendios' | 'custom';
+}
+
+export const TUTORIAL_CATALOG: TutorialMeta[] = [
+  { id: 'tutorial_hoteles_cocina', name: 'Hoteles (con cocina)', label: 'Tutorial 01 — Riesgos Hoteles', description: 'Prevención de riesgos en hoteles con servicio de cocina', structure: 'riesgos' },
+  { id: 'tutorial_hoteles_sin_cocina', name: 'Hoteles (sin cocina)', label: 'Tutorial 01b — Hoteles sin cocina', description: 'Prevención de riesgos en hoteles sin servicio de cocina', structure: 'riesgos' },
+  { id: 'tutorial_hospitales', name: 'Hospitales', label: 'Tutorial 01c — Hospitales', description: 'Prevención de riesgos en hospitales', structure: 'riesgos' },
+  { id: 'tutorial_supermercados', name: 'Supermercados', label: 'Tutorial 01d — Supermercados', description: 'Prevención de riesgos en supermercados', structure: 'riesgos' },
+  { id: 'tutorial_incendios', name: 'Incendios y Evacuación', label: 'Tutorial 02 — Incendios', description: 'Prevención de incendios y plan de evacuación', structure: 'incendios' },
+];
+
+const LEGACY_TUTORIAL_IDS: Record<string, string> = {
+  tutorial_01: 'tutorial_hoteles_cocina',
+  tutorial_02: 'tutorial_incendios',
+};
+
+export function migrateTutorialId(tutorialId: string): string {
+  return LEGACY_TUTORIAL_IDS[tutorialId] ?? tutorialId;
+}
+
+export function getTutorialLabel(tutorialId: string): string {
+  const id = migrateTutorialId(tutorialId);
+  return TUTORIAL_CATALOG.find(t => t.id === id)?.label ?? id;
+}
+
 export const SLOT_INFO = {
   SLOT_01: { name: 'Portada', description: 'Presentación del tutorial y logo del cliente' },
   SLOT_02: { name: 'Objetivos', description: 'Objetivos y temario del curso' },

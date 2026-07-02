@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Project } from '@/lib/types';
 import { nfetch } from '@/lib/notion-fetch';
+import { getTutorialLabel } from '@/lib/constants';
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const PROYECTOS_DB = process.env.NOTION_PROYECTOS_DB_ID;
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { project }: { project: Project } = await req.json();
-  const tutorialLabel = project.tutorialId === 'tutorial_01' ? 'Tutorial 01 — Riesgos Hoteles' : 'Tutorial 02 — Incendios';
+  const tutorialLabel = getTutorialLabel(project.tutorialId);
 
   try {
     const clientId = await findOrCreateClient(project);

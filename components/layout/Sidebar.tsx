@@ -79,7 +79,7 @@ export default function Sidebar() {
 
         <button
           onClick={() => {
-            if (confirm('¿Estás seguro de que querés restablecer todos los cambios al Tutorial 01 Demo?')) {
+            if (confirm('¿Estás seguro de que querés restablecer todos los cambios al estado inicial?')) {
               resetToDemo();
               alert('Datos restablecidos correctamente.');
             }

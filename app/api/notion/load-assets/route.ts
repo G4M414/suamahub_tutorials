@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nfetch } from '@/lib/notion-fetch';
 import { detectDriveKind, driveFileId, type DriveKind } from '@/lib/drive-kind';
+import { getTutorialLabel } from '@/lib/constants';
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const PROYECTOS_DB = process.env.NOTION_PROYECTOS_DB_ID;
@@ -54,9 +55,7 @@ export async function GET(req: NextRequest) {
 
   const clientName = (req.nextUrl.searchParams.get('clientName') ?? '').trim();
   const tutorialId = req.nextUrl.searchParams.get('tutorialId');
-  const tutorialLabel = tutorialId === 'tutorial_02'
-    ? 'Tutorial 02 — Incendios'
-    : 'Tutorial 01 — Riesgos Hoteles';
+  const tutorialLabel = getTutorialLabel(tutorialId ?? 'tutorial_hoteles_cocina');
 
   if (!clientName) return NextResponse.json({ assets: {} });
 

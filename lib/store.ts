@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Project, ColorPalette, Slot, MediaItem, RiskSubModule, NotionClient } from './types';
-import { mockProjectTutorial01, mockProjectTutorial02 } from './mock-data';
+import { mockProjectTutorial01, TUTORIAL_MOCK_DATA } from './mock-data';
+import { migrateTutorialId } from './constants';
 
 interface ProjectStore {
   project: Project;
@@ -52,7 +53,7 @@ interface ProjectStore {
   
   // Reset
   resetToDemo: () => void;
-  loadTutorial: (tutorialId: 'tutorial_01' | 'tutorial_02') => void;
+  loadTutorial: (tutorialId: string) => void;
   fillMissingScripts: () => void;
 }
 
@@ -380,18 +381,14 @@ export const useProjectStore = create<ProjectStore>()(
         set(() => ({
           project: JSON.parse(
             JSON.stringify(
-              tutorialId === 'tutorial_01'
-                ? mockProjectTutorial01
-                : mockProjectTutorial02
+              TUTORIAL_MOCK_DATA[tutorialId] ?? mockProjectTutorial01
             )
           ),
         })),
 
       fillMissingScripts: () =>
         set((state) => {
-          const template = state.project.tutorialId === 'tutorial_01'
-            ? mockProjectTutorial01
-            : mockProjectTutorial02;
+          const template = TUTORIAL_MOCK_DATA[state.project.tutorialId] ?? mockProjectTutorial01;
           const filled: Record<string, string> = {};
           for (const [key, val] of Object.entries(template.voiceScript)) {
             if (!state.project.voiceScript[key]?.trim()) {
@@ -411,6 +408,9 @@ export const useProjectStore = create<ProjectStore>()(
       name: 'suama-project-storage',
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+
+        state.project.tutorialId = migrateTutorialId(state.project.tutorialId);
+
         const logo = state.project.identity.logoUrl;
 
         // Las blob: URLs solo son válidas en la sesión que las creó. Y el viejo

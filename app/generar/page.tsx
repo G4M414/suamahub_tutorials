@@ -22,6 +22,7 @@ import {
   ExternalLink,
   Info,
 } from 'lucide-react';
+import { getTutorialLabel, TUTORIAL_CATALOG } from '@/lib/constants';
 
 type RenderStep = 'idle' | 'submitting' | 'rendering' | 'success' | 'error';
 
@@ -92,9 +93,7 @@ export default function GenerarMP4() {
           setJob(prev => ({ ...prev, step: 'success', progress: 100, url: data.url }));
           setRenderStatus('success', 100);
           // Sync automático con Notion — fire and forget
-          const tutorialName = project.tutorialId === 'tutorial_01'
-            ? 'Tutorial 01 — Riesgos Hoteles'
-            : 'Tutorial 02 — Incendios';
+          const tutorialName = getTutorialLabel(project.tutorialId);
           // Sync con Notion: upsert por módulo (Link Drive + Audio) + link al MP4.
           fetch('/api/notion/sync', {
             method: 'POST',
@@ -294,7 +293,7 @@ export default function GenerarMP4() {
               {[
                 { label: 'Cliente', value: project.clientName },
                 { label: 'Proyecto', value: project.projectName },
-                { label: 'Tutorial', value: project.tutorialId === 'tutorial_01' ? 'Riesgos Laborales' : 'Incendios y Evacuación' },
+                { label: 'Tutorial', value: TUTORIAL_CATALOG.find(t => t.id === project.tutorialId)?.name ?? project.tutorialId },
                 { label: 'Escenas', value: `${activeSlots.length} activas` },
                 { label: 'Módulos de riesgo', value: `${activeRiskModules.length} activos` },
               ].map(({ label, value }) => (

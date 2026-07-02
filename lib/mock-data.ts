@@ -7,7 +7,7 @@ export const mockProjectTutorial01: Project = {
   clientName: 'SUAMA Demo Client',
   companyName: '',
   industry: 'Hotel',
-  tutorialId: 'tutorial_01',
+  tutorialId: 'tutorial_hoteles_cocina',
   identity: {
     logoUrl: '/logo-suama.jpg',
     colors: { ...SUAMA_COLORS },
@@ -19,7 +19,7 @@ export const mockProjectTutorial01: Project = {
       title: 'Portada',
       active: true,
       fields: {
-        title: 'Prevención de riesgos en hoteles y restaurantes',
+        title: 'Prevención de riesgos en hoteles (con cocina)',
         subtitle: 'Capacitación obligatoria de higiene y seguridad',
       },
     },
@@ -253,6 +253,26 @@ export const mockProjectTutorial01: Project = {
           ],
           mediaId: 'media_08g',
         },
+        {
+          id: '08h',
+          name: 'Primeros Auxilios',
+          active: true,
+          causes: [
+            'Hemorragias por cortes o golpes durante la tarea',
+            'Quemaduras por contacto con superficies u objetos calientes',
+            'Lesiones musculoesqueléticas por caídas o impactos',
+            'Contacto con sangre u otros líquidos corporales sin protección',
+          ],
+          measures: [
+            'Antes de atender: colocarse guantes, antiparras y barbijo como barrera de protección',
+            'Hemorragias: aplicar presión directa con la parte plana de los dedos sobre vendaje estéril o apósito limpio',
+            'Quemaduras: enfriar con agua fría (no helada) durante 15-30 minutos, no aplicar cremas ni remedios caseros, cubrir con vendaje limpio',
+            'Lesiones musculoesqueléticas: no mover la parte afectada, inmovilizar con materiales disponibles, aplicar hielo envuelto máximo 20 minutos',
+            'Llamar al 911 o 107 y esperar en el lugar; no trasladar salvo necesidad estricta',
+            'Mantener la calma, priorizar lesiones que pongan en peligro la vida y no hacer más de lo necesario hasta que llegue la ayuda profesional',
+          ],
+          mediaId: 'media_08h',
+        },
       ],
     },
     {
@@ -306,6 +326,7 @@ export const mockProjectTutorial01: Project = {
     'media_08e': { id: 'media_08e_default', placeholderId: 'media_08e', type: 'image', source: 'upload', url: null },
     'media_08f': { id: 'media_08f_default', placeholderId: 'media_08f', type: 'image', source: 'upload', url: null },
     'media_08g': { id: 'media_08g_default', placeholderId: 'media_08g', type: 'image', source: 'upload', url: null },
+    'media_08h': { id: 'media_08h_default', placeholderId: 'media_08h', type: 'image', source: 'upload', url: null },
   },
   voiceScript: {
     SLOT_01: 'Bienvenidos a la capacitación sobre prevención de riesgos en hoteles y restaurantes. Este tutorial contiene normas fundamentales de higiene y seguridad para proteger su salud y bienestar durante el trabajo.',
@@ -323,6 +344,7 @@ export const mockProjectTutorial01: Project = {
     '08e': 'Peligro de incendios. La acumulación de grasa en campanas y fallas eléctricas son los mayores riesgos en cocinas. Mantenga limpia y desengrasada la campana de extracción, conozca la ubicación de extintores y las vías de evacuación.',
     '08f': 'Productos químicos. El contacto con detergentes industriales o mezclas peligrosas como cloro con amoníaco causan lesiones. Use guantes de nitrilo, antiparras, lea las hojas de seguridad y rotule siempre los envases fraccionados.',
     '08g': 'Sobreesfuerzos. Levantar cargas pesadas o doblarse al tender camas genera lesiones lumbares. Flexione las piernas, mantenga la espalda recta, acerque la carga al cuerpo y solicite ayuda o carros para pesos mayores a 25 kilos.',
+    '08h': 'Primeros Auxilios. Ante una emergencia, lo primero es protegerse: use guantes y barbijo antes de asistir. Para hemorragias, aplique presión directa con un vendaje sobre la herida. En quemaduras, enfríe con agua fría durante quince a treinta minutos sin aplicar cremas. Ante una posible fractura, no mueva a la persona e inmovilice la zona. Llame al novecientos once o al ciento siete y espere a los profesionales. Recuerde: mantenga la calma, priorice las lesiones graves y no haga más de lo necesario.',
     SLOT_09: 'Recuerde: la prevención no es una regla impuesta, es un hábito diario para regresar a salvo a su hogar. Ante cualquier peligro no controlado en su sector, informe inmediatamente a su superior. La seguridad la hacemos entre todos.',
     SLOT_10: 'Muchas gracias por su atención y compromiso con la seguridad. Para más información e instructivos detallados, puede visitar nuestro sitio oficial art prevencion smg punto com punto ar.',
   },
@@ -337,7 +359,7 @@ export const mockProjectTutorial02: Project = {
   clientName: 'SUAMA Demo Client',
   companyName: '',
   industry: 'Empresa genérica',
-  tutorialId: 'tutorial_02',
+  tutorialId: 'tutorial_incendios',
   identity: {
     logoUrl: null,
     colors: {
@@ -538,5 +560,159 @@ export const mockProjectTutorial02: Project = {
   voiceAudioUrls: {},
   renderStatus: 'idle',
   renderProgress: 0,
+};
+
+// ── Variantes de la estructura de riesgos ────────────────────────────────────
+
+function cloneTutorial(base: Project, overrides: Partial<Project>): Project {
+  const clone: Project = JSON.parse(JSON.stringify(base));
+  return { ...clone, ...overrides, slots: overrides.slots ?? clone.slots };
+}
+
+function withSlotTitle(base: Project, slotId: string, title: string): Project['slots'] {
+  const slots: Project['slots'] = JSON.parse(JSON.stringify(base.slots));
+  const slot = slots.find(s => s.id === slotId);
+  if (slot?.fields) slot.fields.title = title;
+  return slots;
+}
+
+export const mockProjectHotelesSinCocina: Project = (() => {
+  const slots: Project['slots'] = JSON.parse(JSON.stringify(mockProjectTutorial01.slots));
+  const slot01 = slots.find(s => s.id === 'SLOT_01');
+  if (slot01?.fields) slot01.fields.title = 'Prevención de riesgos en hoteles';
+  const slot08 = slots.find(s => s.id === 'SLOT_08');
+  if (slot08?.riskModules) {
+    const rm08b = slot08.riskModules.find(r => r.id === '08b');
+    if (rm08b) rm08b.active = false;
+    const rm08c = slot08.riskModules.find(r => r.id === '08c');
+    if (rm08c) {
+      rm08c.causes = [
+        'Contacto accidental con tuberías de agua caliente o vapor sin aislar',
+        'Manipulación de equipos de planchado industrial en lavandería',
+        'Superficies calientes de calderas y sistemas de calefacción',
+        'Traslado de recipientes calientes durante tareas de mantenimiento',
+      ];
+      rm08c.measures = [
+        'Verificar el aislamiento térmico de tuberías y equipos antes de intervenir',
+        'Utilizar guantes térmicos homologados y ropa de manga larga en tareas de mantenimiento',
+        'Señalizar tuberías y superficies calientes con cartelería visible',
+        'Esperar el enfriamiento adecuado de equipos antes de realizar tareas de limpieza o reparación',
+      ];
+    }
+    const rm08e = slot08.riskModules.find(r => r.id === '08e');
+    if (rm08e) {
+      rm08e.causes = [
+        'Fallas en instalaciones eléctricas o sobrecarga de tomas',
+        'Desperfectos en sistemas de calefacción y calderas',
+        'Acumulación de materiales inflamables en depósitos y lavandería',
+        'Detectores de humo obstruidos o fuera de servicio',
+      ];
+      rm08e.measures = [
+        'Inspeccionar periódicamente instalaciones eléctricas, calefacción y calderas',
+        'Mantener despejadas y señalizadas las áreas con extintores y mangueras contra incendios',
+        'Ordenar y controlar el almacenamiento de materiales inflamables en depósitos y lavandería',
+        'Verificar que los detectores de humo estén operativos y sin obstrucciones',
+        'Conocer y mantener libres las vías de evacuación en pasillos y habitaciones',
+      ];
+    }
+  }
+  const voiceScript = { ...mockProjectTutorial01.voiceScript };
+  voiceScript.SLOT_01 = 'Bienvenidos a la capacitación sobre prevención de riesgos en hoteles. Este tutorial contiene normas fundamentales de higiene y seguridad para proteger su salud y bienestar durante el trabajo.';
+  voiceScript['08c'] = 'Quemaduras. En tareas de mantenimiento, las tuberías de agua caliente y vapor sin aislar son una causa frecuente de quemaduras. Use siempre guantes térmicos, verifique el aislamiento antes de intervenir y espere el enfriamiento de los equipos antes de limpiarlos. En trabajos de soldadura, use siempre careta, guantes térmicos y ropa ignífuga, y asegúrese de contar con extintor cerca del área.';
+  voiceScript['08e'] = 'Peligro de incendios. En hoteles, las principales causas de incendio son fallas en instalaciones eléctricas, sistemas de calefacción y calderas, y acumulación de materiales inflamables en áreas de almacenamiento y lavandería. Conozca la ubicación de extintores y mangueras contra incendios en su área de trabajo, y verifique que los detectores de humo estén operativos y sin obstrucciones.';
+  return cloneTutorial(mockProjectTutorial01, {
+    id: 'demo_hoteles_sin_cocina',
+    projectName: 'Capacitación General SMG - Hotelería (sin cocina)',
+    tutorialId: 'tutorial_hoteles_sin_cocina',
+    slots,
+    voiceScript,
+  });
+})();
+
+export const mockProjectHospitales: Project = (() => {
+  const slots = withSlotTitle(mockProjectTutorial01, 'SLOT_01', 'Prevención de riesgos en hospitales');
+  const voiceScript = { ...mockProjectTutorial01.voiceScript };
+  voiceScript.SLOT_01 = 'Bienvenidos a la capacitación sobre prevención de riesgos en hospitales. Este tutorial contiene normas fundamentales de higiene y seguridad para proteger su salud y bienestar durante el trabajo.';
+  return cloneTutorial(mockProjectTutorial01, {
+    id: 'demo_hospitales',
+    projectName: 'Capacitación General SMG - Hospitales',
+    industry: 'Hospital',
+    tutorialId: 'tutorial_hospitales',
+    slots,
+    voiceScript,
+  });
+})();
+
+export const mockProjectSupermercados: Project = (() => {
+  const slots = withSlotTitle(mockProjectTutorial01, 'SLOT_01', 'Prevención de riesgos en supermercados');
+  const slot08 = slots.find(s => s.id === 'SLOT_08');
+  const rm08c = slot08?.riskModules?.find(r => r.id === '08c');
+  if (rm08c) {
+    rm08c.causes = [
+      'Contacto accidental con tuberías de agua caliente o vapor sin aislar',
+      'Superficies calientes de calderas, compresores y sistemas de refrigeración',
+      'Trabajos de soldadura y mantenimiento de instalaciones',
+      'Traslado de recipientes o piezas calientes durante tareas de mantenimiento',
+    ];
+    rm08c.measures = [
+      'Verificar el aislamiento térmico de tuberías y equipos antes de intervenir',
+      'Utilizar guantes térmicos homologados y ropa de manga larga en tareas de mantenimiento',
+      'En trabajos de soldadura, usar careta, guantes térmicos, ropa ignífuga y mantener extintor cerca del área',
+      'Señalizar tuberías y superficies calientes con cartelería visible',
+      'Esperar el enfriamiento adecuado de equipos antes de realizar tareas de limpieza o reparación',
+    ];
+  }
+  const rm08e = slot08?.riskModules?.find(r => r.id === '08e');
+  if (rm08e) {
+    rm08e.causes = [
+      'Fallas eléctricas en sistemas de frío central y cámaras de refrigeración',
+      'Desperfectos en hornos y equipos de panadería',
+      'Acumulación de cartón, plásticos y embalajes en el depósito',
+      'Sobrecarga de tomas e instalaciones eléctricas en salón de ventas y oficinas',
+    ];
+    rm08e.measures = [
+      'Inspeccionar y mantener los sistemas de frío central y los hornos de panadería',
+      'Retirar cartón y plásticos acumulados del depósito de forma periódica',
+      'Mantener despejadas y señalizadas las columnas con matafuegos e hidrantes',
+      'Verificar que los detectores de humo estén operativos y sin obstrucciones por mercadería apilada en los racks',
+      'Conocer la ubicación de matafuegos e hidrantes en salón de ventas, depósito y oficinas',
+    ];
+  }
+  const rm08g = slot08?.riskModules?.find(r => r.id === '08g');
+  if (rm08g) {
+    rm08g.causes = [
+      'Levantamiento manual de cajas y bultos de mercadería sin técnica adecuada',
+      'Traslado de pallets, cajones y bebidas sin usar carros o zorras',
+      'Reposición de góndolas con posturas forzadas o giros bruscos',
+      'Tareas repetitivas de carga y descarga sin pausas activas',
+    ];
+    rm08g.measures = [
+      'Conocer el peso de los objetos antes de levantarlos (límite recomendado: 25 kg)',
+      'Aplicar técnicas correctas: flexionar rodillas, mantener espalda recta y carga cerca del cuerpo',
+      'Utilizar equipo de carga (carros, zorras, carritos) para traslados de mercadería pesada',
+      'Rotar tareas y realizar pausas activas durante la jornada',
+    ];
+  }
+  const voiceScript = { ...mockProjectTutorial01.voiceScript };
+  voiceScript.SLOT_01 = 'Bienvenidos a la capacitación sobre prevención de riesgos en supermercados. Este tutorial contiene normas fundamentales de higiene y seguridad para proteger su salud y bienestar durante el trabajo.';
+  voiceScript['08c'] = 'Quemaduras. En tareas de mantenimiento, las tuberías de agua caliente y vapor sin aislar son una causa frecuente de quemaduras. Use siempre guantes térmicos, verifique el aislamiento antes de intervenir y espere el enfriamiento de los equipos antes de limpiarlos. En trabajos de soldadura, use siempre careta, guantes térmicos y ropa ignífuga, y asegúrese de contar con extintor cerca del área.';
+  voiceScript['08e'] = 'Peligro de incendios. En supermercados, las principales causas de incendio son fallas eléctricas en sistemas de frío central, desperfectos en hornos de panadería y la acumulación de cartón o plásticos en el depósito. Identifique la ubicación de los matafuegos e hidrantes instalados en columnas y pasillos tanto en oficinas como en el salón de ventas, y verifique que los detectores de humo en el techo estén operativos y sin obstrucciones por mercadería apilada en los racks.';
+  voiceScript['08g'] = 'Sobreesfuerzos. El traslado manual de cajas, pallets y cajones de bebidas es una causa frecuente de lesiones lumbares en supermercados. Flexione las piernas, mantenga la espalda recta, acerque la carga al cuerpo y utilice carros o zorras para trasladar pesos mayores a 25 kilos.';
+  return cloneTutorial(mockProjectTutorial01, {
+    id: 'demo_supermercados',
+    projectName: 'Capacitación General SMG - Supermercados',
+    industry: 'Supermercado',
+    tutorialId: 'tutorial_supermercados',
+    slots,
+    voiceScript,
+  });
+})();
+
+export const TUTORIAL_MOCK_DATA: Record<string, Project> = {
+  tutorial_hoteles_cocina: mockProjectTutorial01,
+  tutorial_hoteles_sin_cocina: mockProjectHotelesSinCocina,
+  tutorial_hospitales: mockProjectHospitales,
+  tutorial_supermercados: mockProjectSupermercados,
+  tutorial_incendios: mockProjectTutorial02,
 };
 
