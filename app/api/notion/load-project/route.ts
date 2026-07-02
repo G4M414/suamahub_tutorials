@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nfetch } from '@/lib/notion-fetch';
+import { getTutorialLabel } from '@/lib/constants';
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const PROYECTOS_DB = process.env.NOTION_PROYECTOS_DB_ID;
@@ -19,9 +20,7 @@ export async function GET(req: NextRequest) {
   const clientName = req.nextUrl.searchParams.get('clientName');
   const tutorialId = req.nextUrl.searchParams.get('tutorialId');
 
-  const tutorialLabel = tutorialId === 'tutorial_01'
-    ? 'Tutorial 01 — Riesgos Hoteles'
-    : 'Tutorial 02 — Incendios';
+  const tutorialLabel = getTutorialLabel(tutorialId ?? 'tutorial_hoteles_cocina');
 
   try {
     const filter: Record<string, unknown> = tutorialId

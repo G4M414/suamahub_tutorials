@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useProjectStore } from '@/lib/store';
 import { useUiStore } from '@/lib/ui-store';
-import { SUAMA_COLORS } from '@/lib/constants';
+import { SUAMA_COLORS, TUTORIAL_CATALOG } from '@/lib/constants';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import {
@@ -246,36 +246,46 @@ export default function Home() {
 
         {/* Template Selector */}
         <div className="flex flex-col space-y-2 bg-slate-950/50 border border-slate-800 p-4 rounded-xl md:w-80">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Cambiar Plantilla Madre</span>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => {
-                if (confirm('¿Querés cargar la plantilla de Riesgos en Hoteles y Restaurantes? Se perderán los cambios actuales.')) {
-                  loadTutorial('tutorial_01');
-                }
-              }}
-              className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ${
-                project.tutorialId === 'tutorial_01'
-                  ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,153,139,0.15)]'
-                  : 'bg-transparent border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              Hoteles y Rest.
-            </button>
-            <button
-              onClick={() => {
-                if (confirm('¿Querés cargar la plantilla de Prevención de Incendios y Evacuación? Se perderán los cambios actuales.')) {
-                  loadTutorial('tutorial_02');
-                }
-              }}
-              className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ${
-                project.tutorialId === 'tutorial_02'
-                  ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,153,139,0.15)]'
-                  : 'bg-transparent border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              Incendios y Evac.
-            </button>
+          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Seleccionar Tutorial</span>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[9px] text-slate-600 font-semibold uppercase tracking-wider mt-1">Riesgos Laborales</span>
+            {TUTORIAL_CATALOG.filter(t => t.structure === 'riesgos').map(t => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  if (project.tutorialId === t.id) return;
+                  if (confirm(`¿Cargar la plantilla "${t.name}"? Se perderán los cambios actuales.`)) {
+                    loadTutorial(t.id);
+                  }
+                }}
+                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 text-left ${
+                  project.tutorialId === t.id
+                    ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,153,139,0.15)]'
+                    : 'bg-transparent border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                {t.name}
+              </button>
+            ))}
+            <span className="text-[9px] text-slate-600 font-semibold uppercase tracking-wider mt-2">Otros</span>
+            {TUTORIAL_CATALOG.filter(t => t.structure !== 'riesgos').map(t => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  if (project.tutorialId === t.id) return;
+                  if (confirm(`¿Cargar la plantilla "${t.name}"? Se perderán los cambios actuales.`)) {
+                    loadTutorial(t.id);
+                  }
+                }}
+                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 text-left ${
+                  project.tutorialId === t.id
+                    ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,153,139,0.15)]'
+                    : 'bg-transparent border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                {t.name}
+              </button>
+            ))}
           </div>
         </div>
       </div>

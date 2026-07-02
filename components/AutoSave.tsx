@@ -19,12 +19,18 @@ const DEBOUNCE_MS = 2500;
 export default function AutoSave() {
   const project = useProjectStore((s) => s.project);
   const first = useRef(true);
+  const prevTutorialId = useRef(project.tutorialId);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Saltar el primer render (hidratación), no es un cambio del usuario.
     if (first.current) {
       first.current = false;
+      return;
+    }
+    // Saltar cuando cambia el tutorial (carga de plantilla o migración de ID).
+    if (prevTutorialId.current !== project.tutorialId) {
+      prevTutorialId.current = project.tutorialId;
       return;
     }
     if (useUiStore.getState().suppressSave) return;
