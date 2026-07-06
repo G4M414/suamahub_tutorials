@@ -708,11 +708,246 @@ export const mockProjectSupermercados: Project = (() => {
   });
 })();
 
+// ── Estructura propia: Clasificación de Residuos ─────────────────────────────
+// No sigue la estructura madre de riesgos (fuente: PDF "Plan de Manejo
+// Responsable de Residuos - Nosotros Separamos"). Reutiliza el mismo motor de
+// slots/riskModules, pero con SLOT_05 y SLOT_06 desactivados (sin contenido
+// equivalente en la fuente) y SLOT_08 reinterpretado como categorías de
+// residuos en lugar de riesgos.
+
+export const mockProjectResiduos: Project = {
+  id: 'demo_project_03',
+  projectName: 'Plan de Manejo Responsable de Residuos',
+  clientName: 'SUAMA Demo Client',
+  companyName: '',
+  industry: 'Empresa genérica',
+  tutorialId: 'tutorial_residuos',
+  identity: {
+    logoUrl: null,
+    colors: {
+      primary: '#16a34a',    // Verde (residuos húmedos / reciclaje)
+      secondary: '#0284c7',  // Azul (residuos secos)
+      accent: '#f59e0b',     // Ámbar (residuos peligrosos / advertencia)
+      background: '#ffffff',
+      text: '#1e293b',
+    },
+    fontFamily: 'inter',
+  },
+  slots: [
+    {
+      id: 'SLOT_01',
+      title: 'Portada',
+      active: true,
+      fields: {
+        title: 'Plan de Manejo Responsable de Residuos',
+        subtitle: 'Nosotros Separamos',
+      },
+    },
+    {
+      id: 'SLOT_02',
+      title: 'Objetivos',
+      active: true,
+      fields: {
+        objectivesText: 'Conocer los materiales susceptibles de separación y reciclaje para realizar correctamente la separación de residuos húmedos y secos en origen, reduciendo el impacto ambiental de nuestra actividad y cumpliendo con la normativa vigente de gestión de residuos.',
+      },
+    },
+    {
+      id: 'SLOT_03',
+      title: 'Marco Legal',
+      active: true,
+      fields: {
+        laws: [
+          'Ley 1854 – Gestión Integral de Residuos Sólidos Urbanos (GIRSU)',
+          '"Basura Cero" – Reducción progresiva de la disposición final de residuos sólidos urbanos',
+          '"Nosotros Separamos" – Plan de manejo responsable de residuos para generadores especiales',
+        ],
+        description: 'La gestión de residuos en nuestro sector se enmarca en un plan normativo progresivo: desde la gestión integral de los residuos sólidos urbanos hasta la obligación de separar en origen como generadores especiales.',
+      },
+    },
+    {
+      id: 'SLOT_04',
+      title: 'Definiciones Clave',
+      active: true,
+      fields: {
+        definitions: [
+          { term: 'Residuos húmedos', definition: 'Residuos generales no reciclables que van al contenedor negro y a disposición final: restos de comida, envoltorios sucios, papel higiénico, cerámica y porcelana.' },
+          { term: 'Residuos secos', definition: 'Materiales reciclables que se separan en dos contenedores: verde para envases reciclables (plásticos, metales y vidrio) y amarillo para papel y cartón. El material debe estar lavado, limpio y seco.' },
+          { term: 'Residuos peligrosos', definition: 'Prohibidos en todos los contenedores; requieren gestión especial: inflamables, liberadores de gases tóxicos, insecticidas, pilas, tintas, látex, resinas y cartuchos de impresoras.' },
+          { term: 'Recolección diferenciada', definition: 'Retiro semanal de los residuos secos a cargo de una Cooperativa de Recuperadores Urbanos, separado de la recolección normal diaria de residuos húmedos.' },
+        ],
+      },
+    },
+    {
+      id: 'SLOT_05',
+      title: 'Razones para la Prevención',
+      active: false,
+      fields: {},
+    },
+    {
+      id: 'SLOT_06',
+      title: 'Principios Clave',
+      active: false,
+      fields: {},
+    },
+    {
+      id: 'SLOT_07',
+      title: 'Gestión y Roles',
+      active: true,
+      fields: {
+        managementDescription: '¿Cómo es la recolección? Recolección normal: todos los días de la semana, para los residuos húmedos del contenedor negro. Recolección diferenciada: una vez por semana, a cargo de una Cooperativa de Recuperadores Urbanos, para los residuos secos de los contenedores verde y amarillo.',
+        hierarchyOfControls: 'Jerarquía de gestión de residuos: 1. Reducir el consumo | 2. Reutilizar materiales | 3. Reciclar separando en origen | 4. Disponer correctamente lo no reciclable.',
+        responsibilities: [
+          'Comité de seguimiento: designar responsables de controlar el correcto cumplimiento de la separación de residuos.',
+          'Actitud activa y responsable: todo el personal debe involucrarse en la separación de residuos secos y húmedos en su sector de trabajo.',
+        ],
+      },
+    },
+    {
+      id: 'SLOT_08',
+      title: 'Módulos de Riesgo',
+      active: true,
+      fields: {},
+      riskModules: [
+        {
+          id: '08a',
+          name: 'Envases Reciclables (Verde)',
+          active: true,
+          causes: [
+            'Botellas y bidones plásticos',
+            'Bolsas y envases plásticos',
+            'Vajilla descartable y telgopor',
+            'Metales, latas y tapas',
+            'Botellas y frascos de vidrio (vacíos, sin líquido)',
+          ],
+          measures: [
+            'El material debe estar lavado, limpio y seco',
+            'Aplastar botellas plásticas y latas para reducir el volumen',
+            'Depositarlo en el contenedor VERDE',
+          ],
+          mediaId: 'media_08a',
+        },
+        {
+          id: '08b',
+          name: 'Papel y Cartón (Amarillo)',
+          active: true,
+          causes: [
+            'Hojas, folios, cuadernos y libretas',
+            'Cajas de cartón',
+            'Diarios, revistas, fotocopias y publicidad',
+            'Textiles, telas y trapos',
+          ],
+          measures: [
+            'El material debe estar limpio y seco',
+            'Doblar las cajas de cartón para ahorrar espacio',
+            'Depositarlo en el contenedor AMARILLO',
+          ],
+          mediaId: 'media_08b',
+        },
+        {
+          id: '08c',
+          name: 'Húmedos / No Reciclables (Negro)',
+          active: true,
+          causes: [
+            'Restos de comida y envoltorios sucios',
+            'Papel higiénico, pañales y apósitos femeninos',
+            'Cerámica, porcelana, goma, corcho y plastificados',
+            'Vidrios rotos o aislados (envueltos en papel)',
+          ],
+          measures: [
+            'Depositarlos en el contenedor NEGRO',
+            'Los vidrios rotos o aislados van envueltos en papel para evitar cortes',
+            'Van a disposición final con la recolección normal diaria',
+          ],
+          mediaId: 'media_08c',
+        },
+        {
+          id: '08d',
+          name: 'Residuos Peligrosos Prohibidos',
+          active: true,
+          causes: [
+            'Líquidos o sólidos inflamables',
+            'Liberadores de gases tóxicos',
+            'Desechos fitosanitarios (insecticidas)',
+            'Pilas y derivados de tintas',
+            'Resinas, plastificantes y cartuchos de impresoras',
+            'Lámparas y tubos con su envase',
+          ],
+          measures: [
+            'Prohibidos en los tres contenedores (negro, verde y amarillo)',
+            'Almacenarlos en un recipiente separado e identificado',
+            'Gestionar su retiro a través de un operador habilitado o punto de acopio específico',
+          ],
+          mediaId: 'media_08d',
+        },
+      ],
+    },
+    {
+      id: 'SLOT_09',
+      title: 'Tips Finales',
+      active: true,
+      fields: {
+        tips: [
+          'Separá antes de tirar: húmedos al contenedor negro; secos al verde (envases) y al amarillo (papel y cartón).',
+          'El material reciclable debe estar siempre lavado, limpio y seco.',
+          'El vidrio se recicla: botellas y frascos vacíos y sin líquido van al contenedor verde; solo los vidrios rotos van al negro, envueltos en papel.',
+          'Los residuos peligrosos (pilas, inflamables, insecticidas, tintas) nunca van a los contenedores comunes.',
+        ],
+      },
+    },
+    {
+      id: 'SLOT_10',
+      title: 'Cierre',
+      active: true,
+      fields: {
+        closingMessage: '¡Gracias por su participación! Juntos construimos un ambiente de trabajo más limpio y sustentable.',
+        web: '',
+        brandText: '',
+      },
+    },
+  ],
+  media: {
+    portada_img: {
+      id: 'media_portada_03',
+      placeholderId: 'portada_img',
+      type: 'image',
+      source: 'upload',
+      url: null,
+    },
+    'objetivos_img': { id: 'media_objetivos_03', placeholderId: 'objetivos_img', type: 'image', source: 'upload', url: null },
+    'slot_03_img':  { id: 'media_slot_03_03',  placeholderId: 'slot_03_img',  type: 'image', source: 'upload', url: null },
+    'slot_04_img':  { id: 'media_slot_04_03',  placeholderId: 'slot_04_img',  type: 'image', source: 'upload', url: null },
+    'slot_07_img':  { id: 'media_slot_07_03',  placeholderId: 'slot_07_img',  type: 'image', source: 'upload', url: null },
+    'slot_09_img':  { id: 'media_slot_09_03',  placeholderId: 'slot_09_img',  type: 'image', source: 'upload', url: null },
+    'slot_10_img':  { id: 'media_slot_10_03',  placeholderId: 'slot_10_img',  type: 'image', source: 'upload', url: null },
+    'media_08a': { id: 'media_08a_residuos_default', placeholderId: 'media_08a', type: 'image', source: 'upload', url: null },
+    'media_08b': { id: 'media_08b_residuos_default', placeholderId: 'media_08b', type: 'image', source: 'upload', url: null },
+    'media_08c': { id: 'media_08c_residuos_default', placeholderId: 'media_08c', type: 'image', source: 'upload', url: null },
+    'media_08d': { id: 'media_08d_residuos_default', placeholderId: 'media_08d', type: 'image', source: 'upload', url: null },
+  },
+  voiceScript: {
+    SLOT_01: 'Bienvenidos al Plan de Manejo Responsable de Residuos. En este tutorial vamos a aprender a separar correctamente los residuos húmedos y secos, cumpliendo con la normativa vigente y cuidando el ambiente.',
+    SLOT_02: 'El objetivo de esta capacitación es que cada participante conozca los materiales que se pueden separar y reciclar, para realizar correctamente la separación de residuos húmedos y secos en origen, reduciendo el impacto ambiental de nuestra actividad.',
+    SLOT_03: 'Nuestra gestión de residuos se enmarca en la Ley de Gestión Integral de Residuos Sólidos Urbanos, el programa Basura Cero de reducción progresiva de la disposición final, y el plan Nosotros Separamos, que nos exige actuar como generadores especiales.',
+    SLOT_04: 'Es importante diferenciar los residuos húmedos, que son los generales no reciclables y se destinan a disposición final, de los secos, que sí son reciclables. Para una mejor distribución, los residuos húmedos deben depositarse en contenedores de color negro, mientras que los residuos secos pueden separarse en dos categorías: el verde para envases de plástico, metal y vidrio, y el amarillo para papel y cartón. El material reciclable debe estar siempre lavado, limpio y seco. Además, existen residuos peligrosos, como pilas, materiales inflamables e insecticidas, que están prohibidos en todos los contenedores y requieren una gestión especial.',
+    SLOT_07: 'La recolección normal de los húmedos es diaria, mientras que la recolección diferenciada de los secos la realiza semanalmente una cooperativa de recuperadores urbanos. Es fundamental formar un comité de seguimiento y que todo el personal asuma una actitud activa y responsable con la separación en su sector.',
+    '08a': 'Envases reciclables. Botellas, bidones, bolsas y envases plásticos, vajilla descartable, telgopor, metales, latas y tapas, y también botellas y frascos de vidrio, siempre vacíos y sin líquido. El material debe estar lavado, limpio y seco. Aplastá las botellas plásticas y las latas para reducir el volumen, y depositalo en el contenedor verde.',
+    '08b': 'Papel y cartón. Hojas, cajas, diarios, revistas, fotocopias, folios, cuadernos, publicidad, y también textiles, telas y trapos. El material debe estar limpio y seco. Doblá las cajas para ahorrar espacio, y depositalo en el contenedor amarillo.',
+    '08c': 'Residuos húmedos y generales no reciclables. Restos de comida, envoltorios sucios, papel higiénico, pañales, cerámica, porcelana, goma, corcho, plastificados. También los vidrios rotos o aislados, siempre envueltos en papel para evitar cortes. Todo va al contenedor negro, con la recolección normal diaria.',
+    '08d': 'Residuos peligrosos prohibidos. Líquidos o sólidos inflamables, liberadores de gases tóxicos, insecticidas, pilas, derivados de tintas, látex, resinas, plastificantes, lámparas y tubos con su envase y cartuchos de impresoras. Están prohibidos en los tres contenedores: deben almacenarse por separado y gestionarse a través de un operador habilitado o un punto de acopio específico.',
+    SLOT_09: 'Recordá separar antes de tirar: los húmedos van al contenedor negro, y los secos al verde para envases y al amarillo para papel y cartón. El material reciclable debe estar lavado, limpio y seco. El vidrio se recicla: botellas y frascos vacíos van al verde, y solo los vidrios rotos van al negro, envueltos en papel. Los residuos peligrosos nunca van a los contenedores comunes.',
+    SLOT_10: 'Muchas gracias por su participación. Juntos construimos un ambiente de trabajo más limpio y sustentable.',
+  },
+  voiceAudioUrls: {},
+  renderStatus: 'idle',
+  renderProgress: 0,
+};
+
 export const TUTORIAL_MOCK_DATA: Record<string, Project> = {
   tutorial_hoteles_cocina: mockProjectTutorial01,
   tutorial_hoteles_sin_cocina: mockProjectHotelesSinCocina,
   tutorial_hospitales: mockProjectHospitales,
   tutorial_supermercados: mockProjectSupermercados,
   tutorial_incendios: mockProjectTutorial02,
+  tutorial_residuos: mockProjectResiduos,
 };
 
