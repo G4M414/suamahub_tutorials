@@ -554,7 +554,7 @@ export const mockProjectTutorial02: Project = {
     '08a': 'Clases de fuego. Distinguimos los de clase A para sólidos como madera o telas; clase B para combustibles y líquidos; clase C para artefactos eléctricos con tensión; y clase K para aceites de freidoras en cocinas.',
     '08b': 'Tipos de extintores. Recuerde utilizar el adecuado: Polvo Químico ABC para fuegos múltiples, CO2 de nieve carbónica para tableros eléctricos sin dañarlos, y extintores K de acetato de potasio para fuegos de grasas.',
     '08c': 'Uso correcto del matafuegos. Descuelgue y retire el precinto. Ubíquese con el viento a su favor y con una vía de escape despejada a su espalda. Apunte directo a la base de las llamas y realice movimientos de barrido continuo.',
-    '09': 'En caso de tener que evacuar, recuerde desplazarse a gatas si hay humo en el pasillo, no utilizar los ascensores por riesgo de quedar atrapado, y dirigirse con calma y sin correr hacia el Punto de Encuentro exterior.',
+    SLOT_09: 'En caso de tener que evacuar, recuerde desplazarse a gatas si hay humo en el pasillo, no utilizar los ascensores por riesgo de quedar atrapado, y dirigirse con calma y sin correr hacia el Punto de Encuentro exterior.',
     SLOT_10: 'Agradecemos su atención y compromiso diario con las prácticas del plan de autoprotección. Recuerde que ante una emergencia, la tranquilidad y el conocimiento salvan vidas.',
   },
   voiceAudioUrls: {},
