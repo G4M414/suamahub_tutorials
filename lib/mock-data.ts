@@ -942,6 +942,245 @@ export const mockProjectResiduos: Project = {
   renderProgress: 0,
 };
 
+// ── Estructura propia: Bioseguridad con Residuos Patogénicos ─────────────────
+// No sigue la estructura madre de riesgos (fuente: PDF SMG ART "Bioseguridad con
+// residuos patogénicos"). Reutiliza el mismo motor de slots/riskModules, con
+// SLOT_05 y SLOT_06 desactivados (sin contenido equivalente en la fuente) y
+// SLOT_08 reinterpretado como ejes de bioseguridad en lugar de riesgos.
+
+export const mockProjectBioseguridad: Project = {
+  id: 'demo_project_04',
+  projectName: 'Bioseguridad con Residuos Patogénicos',
+  clientName: 'SUAMA Demo Client',
+  companyName: '',
+  industry: 'Establecimiento asistencial',
+  tutorialId: 'tutorial_bioseguridad',
+  identity: {
+    logoUrl: null,
+    colors: {
+      primary: '#c8102e',    // Rojo institucional SMG (residuos patogénicos tipo B)
+      secondary: '#3f3f46',  // Gris neutro
+      accent: '#f2b705',     // Amarillo advertencia (biohazard)
+      background: '#ffffff',
+      text: '#1e293b',
+    },
+    fontFamily: 'inter',
+  },
+  slots: [
+    {
+      id: 'SLOT_01',
+      title: 'Portada',
+      active: true,
+      fields: {
+        title: 'Bioseguridad con Residuos Patogénicos',
+        subtitle: 'Higiene, Seguridad y Normas de Bioseguridad',
+      },
+    },
+    {
+      id: 'SLOT_02',
+      title: 'Objetivos',
+      active: true,
+      fields: {
+        objectivesText: 'Identificar los agentes presentes en el ámbito laboral que pueden causar accidentes de trabajo y aprender las acciones preventivas necesarias para conservar la capacidad productiva, proteger la salud y trabajar en forma segura. Temario: 1) Legislación existente · 2) Tipos de residuos · 3) Elementos de guarda · 4) Actores involucrados · 5) Materiales a considerar · 6) Gestión de los residuos · 7) Elementos de protección a emplear.',
+      },
+    },
+    {
+      id: 'SLOT_03',
+      title: 'Marco Legal',
+      active: true,
+      fields: {
+        laws: [
+          'PBA: Ley 11.347 – Dto. 450/94 y Dto. 403/97',
+          'CABA: Ley 154 – Dto. 1886/01',
+          'Nación: Resolución MS y AS 349/94',
+          'Norma IRAM 80059 (adicional) y otras legislaciones provinciales',
+        ],
+        description: 'El manejo de residuos patogénicos se enmarca en la legislación provincial, de la Ciudad de Buenos Aires y nacional vigente, complementada por normas técnicas IRAM.',
+      },
+    },
+    {
+      id: 'SLOT_04',
+      title: 'Definiciones Clave',
+      active: true,
+      fields: {
+        definitions: [
+          { term: 'Patogénicos A', definition: 'Residuos generados en un establecimiento asistencial provenientes de tareas de administración o limpieza general, depósitos, talleres, preparación de alimentos, embalajes y cenizas. Se asimilan a los residuos urbanos.' },
+          { term: 'Patogénicos B', definition: 'Desechos o elementos en estado sólido, líquido, semisólido o gaseoso con características de toxicidad y/o actividad biológica que pueden afectar a los seres vivos o contaminar suelo, agua o atmósfera. Incluye drogas, fármacos, medicamentos y sus envases.' },
+          { term: 'Patogénicos C', definition: 'Residuos radiactivos provenientes de radiología y radioterapia. Por sus propiedades físico-químicas requieren un manejo especial; están regulados por la CNEA.' },
+          { term: 'Elementos de guarda', definition: 'Disposición transitoria en bolsas de polietileno (Art. 12°): tipo A en bolsa verde de espesor mínimo 60 micrones; tipo B en bolsa roja de espesor mínimo 120 micrones, impermeable, opaca y resistente.' },
+        ],
+      },
+    },
+    {
+      id: 'SLOT_05',
+      title: 'Razones para la Prevención',
+      active: false,
+      fields: {},
+    },
+    {
+      id: 'SLOT_06',
+      title: 'Principios Clave',
+      active: false,
+      fields: {},
+    },
+    {
+      id: 'SLOT_07',
+      title: 'Gestión y Roles',
+      active: true,
+      fields: {
+        managementDescription: 'Lugares de generación: office de enfermería, terapia, quirófano, laboratorio y guardia. Personas que los manejan: mucamas, enfermeras, médicos, personal de maestranza y técnicos de laboratorio.',
+        hierarchyOfControls: 'Etapas de la gestión del residuo patogénico: 1. Manejo (generación y guarda transitoria + movimientos internos) | 2. Almacenamiento (en el lugar de generación y en el depósito previo al envío) | 3. Traslado | 4. Tratamiento | 5. Disposición final.',
+        responsibilities: [
+          'El que genera: disponer el residuo en el lugar correcto, no mezclar residuos tipo A y B, y usar los Elementos de Protección Personal.',
+          'El que ordena y transporta: usar los Elementos de Protección Personal y cerrar correctamente la bolsa antes del traslado.',
+        ],
+      },
+    },
+    {
+      id: 'SLOT_08',
+      title: 'Módulos de Riesgo',
+      active: true,
+      fields: {},
+      riskModules: [
+        {
+          id: '08a',
+          name: 'Elementos de Guarda',
+          active: true,
+          causes: [
+            'Residuos tipo A: bolsa de polietileno VERDE, espesor mínimo 60 micrones',
+            'Residuos tipo B: bolsa ROJA, espesor mínimo 120 micrones, impermeable, opaca y resistente',
+            'Cortopunzantes: descartador rígido específico',
+          ],
+          measures: [
+            'Usar la bolsa del color y espesor correcto según el tipo de residuo',
+            'No sobrecargar las bolsas y cerrarlas correctamente',
+            'Descartar agujas y cortopunzantes en el descartador rígido, nunca en la bolsa',
+          ],
+          mediaId: 'media_08a',
+        },
+        {
+          id: '08b',
+          name: 'Materiales a Considerar',
+          active: true,
+          causes: [
+            'Algodones, vendas y gasas usadas; restos orgánicos',
+            'Material descartable (vías, jeringas) y objetos cortantes / punzantes',
+            'Cultivos de laboratorio, residuos farmacéuticos y sangre',
+            'Bolsas colectoras, pañales usados y medicamentos vencidos',
+          ],
+          measures: [
+            'Identificar todo material alcanzado por el Artículo 2 como residuo patogénico',
+            'Separar según corresponda a tipo A o tipo B',
+            'Nunca descartar estos materiales junto con residuos comunes',
+          ],
+          mediaId: 'media_08b',
+        },
+        {
+          id: '08c',
+          name: 'Manejo y Almacenamiento Correcto',
+          active: true,
+          causes: [
+            'Agujas: descartar directamente al descartador, SIN colocar capuchón (no reencapuchar)',
+            'Sangre: a bolsa roja con material absorbente',
+            'Dos etapas de almacenamiento: en el lugar de generación y en el depósito previo al envío',
+          ],
+          measures: [
+            'Descartar los cortopunzantes en el descartador rígido apenas se generan',
+            'No reencapuchar agujas bajo ninguna circunstancia',
+            'Trasladar y almacenar en contenedores identificados para residuos patogénicos',
+          ],
+          mediaId: 'media_08c',
+        },
+        {
+          id: '08d',
+          name: 'Elementos de Protección Personal',
+          active: true,
+          causes: [
+            'Para el manejo médico (generación del residuo): guantes de látex de libre disponibilidad',
+            'Para el manejo de los residuos (retiro, embolsado, contenedor): guantes de látex gruesos y protección ocular',
+          ],
+          measures: [
+            'Usar guantes de látex durante la generación del residuo',
+            'Usar guantes gruesos y protección ocular al manipular y reordenar los residuos',
+            'El empleador debe suministrar todos los elementos de protección',
+          ],
+          mediaId: 'media_08d',
+        },
+        {
+          id: '08e',
+          name: 'Conductas a Seguir',
+          active: true,
+          causes: [
+            'El que genera: disponer en el lugar correcto, no mezclar residuos tipo A y B, usar EPP',
+            'El que ordena y transporta: usar EPP, cerrar correctamente la bolsa',
+          ],
+          measures: [
+            'Segregar correctamente: cada residuo en su bolsa según tipo A o B',
+            'No mezclar tipos de residuos en una misma bolsa',
+            'Cerrar bien las bolsas y usar los EPP en todas las etapas',
+          ],
+          mediaId: 'media_08e',
+        },
+      ],
+    },
+    {
+      id: 'SLOT_09',
+      title: 'Tips Finales',
+      active: true,
+      fields: {
+        tips: [
+          'No mezclar residuos tipo A (bolsa verde) y tipo B (bolsa roja).',
+          'Las agujas van al descartador rígido, SIN capuchón. No reencapuchar nunca.',
+          'La sangre se descarta en bolsa roja con material absorbente.',
+          'Usar siempre los Elementos de Protección Personal: guantes y protección ocular.',
+          'Cerrar correctamente las bolsas antes de trasladarlas.',
+        ],
+      },
+    },
+    {
+      id: 'SLOT_10',
+      title: 'Cierre',
+      active: true,
+      fields: {
+        closingMessage: 'La bioseguridad es responsabilidad de todos. El manejo correcto de los residuos patogénicos protege la salud de trabajadores, pacientes y el ambiente.',
+        web: '',
+        brandText: 'SMG ART',
+      },
+    },
+  ],
+  media: {
+    portada_img: { id: 'media_portada_04', placeholderId: 'portada_img', type: 'image', source: 'upload', url: null },
+    'objetivos_img': { id: 'media_objetivos_04', placeholderId: 'objetivos_img', type: 'image', source: 'upload', url: null },
+    'slot_03_img':  { id: 'media_slot_03_04',  placeholderId: 'slot_03_img',  type: 'image', source: 'upload', url: null },
+    'slot_04_img':  { id: 'media_slot_04_04',  placeholderId: 'slot_04_img',  type: 'image', source: 'upload', url: null },
+    'slot_07_img':  { id: 'media_slot_07_04',  placeholderId: 'slot_07_img',  type: 'image', source: 'upload', url: null },
+    'slot_09_img':  { id: 'media_slot_09_04',  placeholderId: 'slot_09_img',  type: 'image', source: 'upload', url: null },
+    'slot_10_img':  { id: 'media_slot_10_04',  placeholderId: 'slot_10_img',  type: 'image', source: 'upload', url: null },
+    'media_08a': { id: 'media_08a_bio_default', placeholderId: 'media_08a', type: 'image', source: 'upload', url: null },
+    'media_08b': { id: 'media_08b_bio_default', placeholderId: 'media_08b', type: 'image', source: 'upload', url: null },
+    'media_08c': { id: 'media_08c_bio_default', placeholderId: 'media_08c', type: 'image', source: 'upload', url: null },
+    'media_08d': { id: 'media_08d_bio_default', placeholderId: 'media_08d', type: 'image', source: 'upload', url: null },
+    'media_08e': { id: 'media_08e_bio_default', placeholderId: 'media_08e', type: 'image', source: 'upload', url: null },
+  },
+  voiceScript: {
+    SLOT_01: 'Bienvenidos a la capacitación de Bioseguridad con Residuos Patogénicos. En este tutorial vamos a conocer los tipos de residuos, cómo manejarlos de forma segura y qué normas de bioseguridad aplicar para proteger nuestra salud y el ambiente.',
+    SLOT_02: 'El objetivo del curso es identificar los agentes presentes en el ámbito laboral que pueden causar accidentes de trabajo, y aprender las acciones preventivas necesarias para conservar la capacidad productiva, proteger la salud y trabajar en forma segura. Veremos la legislación vigente, los tipos de residuos, los elementos de guarda, los actores involucrados, los materiales a considerar, la gestión de los residuos y los elementos de protección a emplear.',
+    SLOT_03: 'El manejo de residuos patogénicos está regulado por la Ley 11.347 y sus decretos en la Provincia de Buenos Aires, la Ley 154 en la Ciudad de Buenos Aires, la Resolución 349 del 94 a nivel nacional, y complementado por la Norma IRAM 80059 y otras legislaciones provinciales.',
+    SLOT_04: 'Existen tres tipos de residuos patogénicos. Los tipo A son los generados en tareas de administración, limpieza general, depósitos o preparación de alimentos, y se asimilan a los residuos urbanos. Los tipo B son desechos con características de toxicidad o actividad biológica que pueden afectar a los seres vivos o contaminar el ambiente, e incluyen drogas, fármacos y sus envases. Los tipo C son residuos radiactivos de radiología y radioterapia, regulados por la CNEA. Para su guarda transitoria, los tipo A van en bolsa verde de sesenta micrones y los tipo B en bolsa roja de ciento veinte micrones, impermeable y resistente.',
+    SLOT_07: 'Los residuos patogénicos se generan en el office de enfermería, terapia, quirófano, laboratorio y guardia, y son manejados por mucamas, enfermeras, médicos, personal de maestranza y técnicos de laboratorio. Su gestión tiene cinco etapas: manejo, almacenamiento, traslado, tratamiento y disposición final. El que genera debe disponer el residuo en el lugar correcto, no mezclar tipos A y B, y usar protección personal; el que ordena y transporta debe usar protección personal y cerrar correctamente la bolsa.',
+    '08a': 'Elementos de guarda. Los residuos tipo A se disponen en bolsa de polietileno verde de espesor mínimo sesenta micrones, y los tipo B en bolsa roja de ciento veinte micrones, impermeable, opaca y resistente. Los cortopunzantes van siempre a un descartador rígido, nunca a la bolsa. Usá el color y espesor correcto, no sobrecargues las bolsas y cerralas bien.',
+    '08b': 'Materiales a considerar. Son residuos patogénicos los algodones, vendas y gasas usadas, los restos orgánicos, el material descartable como vías y jeringas, los objetos cortantes y punzantes, los cultivos de laboratorio, los residuos farmacéuticos, la sangre, las bolsas colectoras, los pañales usados y los medicamentos vencidos. Nunca los descartes junto con los residuos comunes.',
+    '08c': 'Manejo y almacenamiento correcto. Las agujas se descartan directamente al descartador, sin colocar capuchón: nunca se reencapuchan. La sangre va a bolsa roja con material absorbente. El almacenamiento tiene dos etapas: en el lugar de generación y en el depósito previo al envío. Trasladá y almacená siempre en contenedores identificados para residuos patogénicos.',
+    '08d': 'Elementos de protección personal. Para el manejo médico, durante la generación del residuo, se usan guantes de látex de libre disponibilidad. Para el manejo de los residuos, en el retiro, embolsado y colocación en el contenedor, se usan guantes de látex gruesos y protección ocular. Todos estos elementos deben ser suministrados por el empleador.',
+    '08e': 'Conductas a seguir. El que genera el residuo debe disponerlo en el lugar correcto, no mezclar los tipos A y B, y usar los elementos de protección personal. El que ordena y transporta debe usar protección personal y cerrar correctamente la bolsa. La segregación correcta es la base de la bioseguridad.',
+    SLOT_09: 'Recordá: no mezclar residuos tipo A, en bolsa verde, con los tipo B, en bolsa roja. Las agujas van al descartador rígido sin capuchón, nunca se reencapuchan. La sangre se descarta en bolsa roja con absorbente. Usá siempre guantes y protección ocular, y cerrá bien las bolsas antes de trasladarlas.',
+    SLOT_10: 'La bioseguridad es responsabilidad de todos. El manejo correcto de los residuos patogénicos protege la salud de los trabajadores, los pacientes y el ambiente. Muchas gracias por su participación.',
+  },
+  voiceAudioUrls: {},
+  renderStatus: 'idle',
+  renderProgress: 0,
+};
+
 export const TUTORIAL_MOCK_DATA: Record<string, Project> = {
   tutorial_hoteles_cocina: mockProjectTutorial01,
   tutorial_hoteles_sin_cocina: mockProjectHotelesSinCocina,
@@ -949,5 +1188,6 @@ export const TUTORIAL_MOCK_DATA: Record<string, Project> = {
   tutorial_supermercados: mockProjectSupermercados,
   tutorial_incendios: mockProjectTutorial02,
   tutorial_residuos: mockProjectResiduos,
+  tutorial_bioseguridad: mockProjectBioseguridad,
 };
 
