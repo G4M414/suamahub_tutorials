@@ -76,6 +76,7 @@ export const TUTORIAL_CATALOG: TutorialMeta[] = [
   { id: 'tutorial_supermercados', name: 'Supermercados', label: 'Tutorial 01d — Supermercados', description: 'Prevención de riesgos en supermercados', structure: 'riesgos' },
   { id: 'tutorial_incendios', name: 'Incendios y Evacuación', label: 'Tutorial 02 — Incendios', description: 'Prevención de incendios y plan de evacuación', structure: 'incendios' },
   { id: 'tutorial_residuos', name: 'Clasificación de Residuos', label: 'Tutorial 03 — Clasificación de Residuos', description: 'Plan de manejo responsable de residuos: separación de residuos húmedos y secos', structure: 'custom' },
+  { id: 'tutorial_bioseguridad', name: 'Bioseguridad Residuos Patogénicos', label: 'Tutorial 04 — Bioseguridad Residuos Patogénicos', description: 'Bioseguridad en el manejo de residuos patogénicos en establecimientos asistenciales', structure: 'custom' },
 ];
 
 const LEGACY_TUTORIAL_IDS: Record<string, string> = {
