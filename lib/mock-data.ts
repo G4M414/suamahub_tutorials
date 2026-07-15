@@ -630,15 +630,47 @@ export const mockProjectHotelesSinCocina: Project = (() => {
 })();
 
 export const mockProjectHospitales: Project = (() => {
-  const slots = withSlotTitle(mockProjectTutorial01, 'SLOT_01', 'Prevención de riesgos en hospitales');
-  const voiceScript = { ...mockProjectTutorial01.voiceScript };
+  // Re-basado en Hoteles sin cocina: ya trae 08b Cortes desactivado y
+  // 08c Quemaduras / 08e Incendio reescritos a contexto de mantenimiento (sin cocina).
+  const slots: Project['slots'] = JSON.parse(JSON.stringify(mockProjectHotelesSinCocina.slots));
+  const slot01 = slots.find(s => s.id === 'SLOT_01');
+  if (slot01?.fields) slot01.fields.title = 'Prevención de riesgos en hospitales';
+  const slot08 = slots.find(s => s.id === 'SLOT_08');
+  if (slot08?.riskModules) {
+    // Primeros Auxilios: apagado por default (redundante para personal de salud ya formado).
+    const rm08h = slot08.riskModules.find(r => r.id === '08h');
+    if (rm08h) rm08h.active = false;
+    // Riesgo más característico de un hospital: manejo de residuos patogénicos (condensado).
+    slot08.riskModules.push({
+      id: '08i',
+      name: 'Residuos Patogénicos',
+      active: true,
+      causes: [
+        'Tipo A: asimilables a residuos comunes (administración, limpieza, cocina, embalajes) → bolsa VERDE',
+        'Tipo B: biológicos o tóxicos (sangre, cultivos, cortopunzantes, material descartable, farmacéuticos) → bolsa ROJA',
+        'Tipo C: radiactivos (radiología y radioterapia) → manejo especial, regulados por la CNEA',
+      ],
+      measures: [
+        'Separar en origen: nunca mezclar residuos tipo A (verde) con tipo B (roja)',
+        'Cortopunzantes y agujas al descartador rígido, SIN reencapuchar',
+        'Bolsa roja de 120 micrones, impermeable y resistente; cerrarla bien antes de trasladar',
+        'Usar siempre EPP (guantes, protección ocular) provistos por el empleador',
+      ],
+      mediaId: 'media_08i',
+    });
+  }
+  const media = { ...mockProjectHotelesSinCocina.media };
+  media['media_08i'] = { id: 'media_08i_hospital_default', placeholderId: 'media_08i', type: 'image', source: 'upload', url: null };
+  const voiceScript = { ...mockProjectHotelesSinCocina.voiceScript };
   voiceScript.SLOT_01 = 'Bienvenidos a la capacitación sobre prevención de riesgos en hospitales. Este tutorial contiene normas fundamentales de higiene y seguridad para proteger su salud y bienestar durante el trabajo.';
-  return cloneTutorial(mockProjectTutorial01, {
+  voiceScript['08i'] = 'Residuos patogénicos. Existen tres tipos. Los tipo A se asimilan a los residuos comunes y van en bolsa verde. Los tipo B son biológicos o tóxicos —sangre, cultivos, cortopunzantes, material descartable y farmacéuticos— y van en bolsa roja. Los tipo C son radiactivos y requieren manejo especial regulado por la CNEA. La regla básica: separar en origen sin mezclar tipo A y tipo B, descartar agujas y cortopunzantes en el descartador rígido sin reencapuchar, cerrar bien la bolsa roja antes de trasladarla, y usar siempre los elementos de protección personal.';
+  return cloneTutorial(mockProjectHotelesSinCocina, {
     id: 'demo_hospitales',
     projectName: 'Capacitación General SMG - Hospitales',
     industry: 'Hospital',
     tutorialId: 'tutorial_hospitales',
     slots,
+    media,
     voiceScript,
   });
 })();
