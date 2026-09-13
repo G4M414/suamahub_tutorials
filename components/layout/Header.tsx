@@ -1,72 +1,75 @@
 'use client';
 
 import React from 'react';
-import { useProjectStore } from '@/lib/store';
+import { useCourseStore } from '@/lib/store';
 import { usePathname } from 'next/navigation';
-import { User, Folder } from 'lucide-react';
+import { GraduationCap, Sparkles } from 'lucide-react';
+import { COURSE_CATALOG } from '@/lib/constants';
 
 export default function Header() {
   const pathname = usePathname();
-  const { project, setProjectName, setClientName } = useProjectStore();
+  const { course, loadCourse } = useCourseStore();
 
-  // Determine current section title and description
-  let title = 'Dashboard';
-  let description = 'Bienvenido a la administración de tu proyecto de video tutorial.';
+  let title = 'Dashboard de Producción';
+  let description = 'Visión general del curso y estado de producción de cada módulo.';
 
   if (pathname === '/identidad') {
     title = 'Identidad Visual';
-    description = 'Personalizá el logotipo, colores y tipografías para el cliente.';
-  } else if (pathname === '/contenido') {
-    title = 'Contenido Textual';
-    description = 'Editá los textos del tutorial y activá o desactivá escenas.';
+    description = 'Configuración de logotipo, paleta institucional y tipografías aplicadas a los slides.';
+  } else if (pathname === '/modulos' || pathname === '/contenido') {
+    title = 'Módulos y Contenido';
+    description = 'Editor integral de guiones narrativos, diapositivas de video, materiales descargables y actividades.';
   } else if (pathname === '/medios') {
     title = 'Imágenes y Videos';
-    description = 'Subí tus propios archivos o generá nuevo contenido con IA.';
+    description = 'Gestión de fondos multimedia por módulo y diapositiva (Drive, subida o IA).';
   } else if (pathname === '/voz') {
     title = 'Voz en Off';
-    description = 'Revisá el script completo y generá la voz en off con ElevenLabs.';
+    description = 'Generación de locución con ElevenLabs para cada módulo del curso.';
   } else if (pathname === '/generar') {
-    title = 'Generar Video';
-    description = 'Revisá la configuración y renderizá el video MP4 final.';
+    title = 'Generación de Video MP4';
+    description = 'Renderizado timeline por módulo con Shotstack y descarga lista para LMS.';
+  } else if (pathname === '/evaluacion') {
+    title = 'Evaluación y Examen LMS';
+    description = 'Configuración del examen final y exportador a formatos compatibles con LMS (GIFT/Moodle).';
+  } else if (pathname === '/materiales') {
+    title = 'Materiales Imprimibles';
+    description = 'Guías y plantillas del alumno con diseño editorial SUAMA (@media print).';
   }
 
   return (
-    <header className="h-20 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex items-center justify-between px-8 z-20 relative">
+    <header className="h-20 border-b border-slate-800 bg-slate-950/70 backdrop-blur-xl flex items-center justify-between px-8 z-20 sticky top-0">
       <div>
-        <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
+        <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+          {title}
+        </h2>
         <p className="text-xs text-slate-400 mt-0.5">{description}</p>
       </div>
 
-      {/* Quick Settings: Client & Project Names */}
+      {/* Selector de Curso Activo */}
       <div className="flex items-center space-x-4">
-        {/* Client Name Input */}
-        <div className="flex items-center space-x-2 bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-1.5">
-          <User className="w-3.5 h-3.5 text-slate-400" />
+        <div className="flex items-center space-x-2.5 bg-slate-900/80 border border-slate-800 rounded-xl px-3.5 py-2 shadow-inner">
+          <GraduationCap className="w-4 h-4 text-primary shrink-0" />
           <div className="flex flex-col">
-            <span className="text-[10px] text-slate-500 font-semibold leading-none uppercase">Cliente</span>
-            <input
-              type="text"
-              value={project.clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              className="text-xs font-semibold text-white bg-transparent outline-none border-none p-0 mt-0.5 w-32 focus:w-48 transition-all duration-300"
-              placeholder="Nombre del cliente"
-            />
+            <span className="text-[9px] text-teal-400 font-bold leading-none uppercase tracking-wider">
+              Curso Seleccionado
+            </span>
+            <select
+              value={course.slug}
+              onChange={(e) => loadCourse(e.target.value)}
+              className="text-xs font-bold text-white bg-transparent outline-none border-none p-0 mt-0.5 cursor-pointer"
+            >
+              {COURSE_CATALOG.map((c) => (
+                <option key={c.slug} value={c.slug} className="bg-slate-900 text-white">
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Project Name Input */}
-        <div className="flex items-center space-x-2 bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-1.5">
-          <Folder className="w-3.5 h-3.5 text-slate-400" />
-          <div className="flex flex-col">
-            <span className="text-[10px] text-slate-500 font-semibold leading-none uppercase">Proyecto</span>
-            <input
-              type="text"
-              value={project.projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              className="text-xs font-semibold text-white bg-transparent outline-none border-none p-0 mt-0.5 w-36 focus:w-56 transition-all duration-300"
-              placeholder="Nombre del proyecto"
-            />
-          </div>
+        <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>SUAMA Engine v2</span>
         </div>
       </div>
     </header>

@@ -4,7 +4,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'accent' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'accent' | 'danger' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
@@ -20,14 +20,20 @@ export default function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0b0f19] disabled:opacity-50 disabled:cursor-not-allowed';
-  
+  const baseStyles =
+    'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0b0f19] disabled:opacity-50 disabled:cursor-not-allowed';
+
   const variants = {
-    primary: 'bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(0,153,139,0.25)] hover:shadow-[0_0_20px_rgba(0,153,139,0.4)] focus:ring-primary/50',
-    secondary: 'bg-secondary hover:bg-secondary/90 text-white shadow-[0_0_15px_rgba(2,82,104,0.25)] hover:shadow-[0_0_20px_rgba(2,82,104,0.4)] focus:ring-secondary/50',
+    primary:
+      'bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(0,153,139,0.25)] hover:shadow-[0_0_20px_rgba(0,153,139,0.4)] focus:ring-primary/50',
+    secondary:
+      'bg-secondary hover:bg-secondary/90 text-white shadow-[0_0_15px_rgba(2,82,104,0.25)] hover:shadow-[0_0_20px_rgba(2,82,104,0.4)] focus:ring-secondary/50',
     accent: 'bg-accent hover:bg-accent/90 text-slate-900 focus:ring-accent/50',
     danger: 'bg-rose-600 hover:bg-rose-500 text-white focus:ring-rose-500/50',
-    ghost: 'bg-transparent hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700',
+    ghost:
+      'bg-transparent hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700',
+    outline:
+      'bg-transparent hover:bg-slate-800/80 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600',
   };
 
   const sizes = {

@@ -1,93 +1,136 @@
+// Paleta de colores del curso / identidad visual
 export interface ColorPalette {
-  primary: string;     // Color institucional principal (default teal #00998b)
-  secondary: string;   // Color secundario (default azul profundo #025268)
-  accent: string;      // Color de acento (default dorado/arena #c6c19d)
-  background: string;  // Color de fondo para slides (default blanco #ffffff o gris #e3e3e3)
-  text: string;        // Color de texto principal (default oscuro #2f2722)
+  primary: string;     // Color institucional principal (default #00998b)
+  secondary: string;   // Color secundario (default #025268)
+  accent: string;      // Color de acento (default #c6c19d)
+  background: string;  // Fondo de slides (default #ffffff)
+  text: string;        // Color de texto principal (default #2f2722)
 }
 
-export interface ClientIdentity {
+// Identidad visual del curso
+export interface CourseIdentity {
   logoUrl: string | null;
   colors: ColorPalette;
   fontFamily: string;
-  secondaryText?: string;    // Texto secundario de marca (slogan / bajada), opcional
-  assetsFolderUrl?: string;  // Link a la carpeta Assets del cliente en Drive
+  brandName: string;      // Nombre de la marca/institución (ej: "SUAMA")
+  brandTagline?: string;  // Slogan o bajada opcional (ej: "E-LEARNING · TRAINING · ADVISORY")
+  websiteUrl?: string;    // Web opcional (ej: "www.suamahub.com")
 }
 
-// Identidad de un cliente leída desde Notion (Notion → Dashboard)
-export interface NotionClient {
-  pageId: string;
-  clientName: string;
-  companyName: string;
-  industry: string;
-  tipo: string; // 'Plataforma' | 'Partner' | 'Cliente' (etiqueta, no cambia el flujo)
-  logoUrl: string | null;
-  assetsFolderUrl: string | null;
-  fontFamily: string;
-  secondaryText: string;
-  colors: Partial<ColorPalette>;
+// Un slide individual dentro de un módulo
+export interface CourseSlide {
+  id: string;              // 'slide_01', 'slide_02', etc.
+  title: string;           // Título del slide
+  content: string;         // Texto principal o idea fuerza
+  bulletPoints?: string[]; // Lista de puntos (opcional)
+  note?: string;           // Nota del presentador (no aparece en el video)
+  mediaId?: string;        // ID del media item vinculado a este slide (opcional)
 }
 
-export interface SlotField {
+// Material descargable asociado a un módulo (PDF imprimible)
+export interface DownloadableMaterial {
   id: string;
-  label: string;
-  type: 'text' | 'textarea' | 'list' | 'definitions';
-  value: string | string[] | DefinitionItem[];
+  title: string;           // Nombre de la guía / PDF
+  description: string;     // Descripción breve
+  driveUrl?: string;       // URL del PDF en Google Drive (opcional)
+  sections: MaterialSection[]; // Secciones del contenido de la guía
 }
 
-export interface DefinitionItem {
-  term: string;
-  definition: string;
+export interface MaterialSection {
+  title: string;
+  items: string[];         // Preguntas o puntos de la sección
 }
 
-export interface RiskSubModule {
-  id: string; // e.g. '08a', '08b'
-  name: string; // e.g. 'Resbalones y caídas'
-  active: boolean;
-  causes: string[];
-  measures: string[];
-  mediaId: string; // maps to a media item for this risk
-  videoUrl?: string;
+// Actividad práctica del módulo
+export interface PracticeActivity {
+  id: string;
+  title: string;
+  description: string;     // Instrucción de la actividad
+  steps?: string[];        // Pasos guiados
+  driveUrl?: string;       // URL de la plantilla en Drive (si existe)
 }
 
-export interface Slot {
-  id: string; // 'SLOT_01' to 'SLOT_10'
-  title: string; // e.g. 'Portada'
-  active: boolean;
-  fields: Record<string, string | string[] | DefinitionItem[]>;
-  riskModules?: RiskSubModule[]; // Only populated for SLOT_08
-  mediaId?: string; // optional single-image placeholder (e.g. SLOT_03B → 'slot_03b_img')
+// Pregunta de evaluación
+export interface ExamQuestion {
+  id: string;
+  question: string;
+  options: string[];       // Exactamente 4 opciones (A, B, C, D)
+  correctIndex: number;    // Índice de la respuesta correcta (0-3)
+  explanation?: string;    // Justificación pedagógica opcional
 }
 
+// Evaluación final del curso
+export interface CourseExam {
+  title: string;
+  passingScore: number;    // Mínimo de respuestas correctas para aprobar (ej: 2)
+  totalQuestions: number;  // Total de preguntas (ej: 3)
+  questions: ExamQuestion[];
+}
+
+// Item de media (imagen o video de fondo)
 export interface MediaItem {
-  id: string; // unique identifier
-  placeholderId: string; // e.g., 'portada_img', '08a_media'
+  id: string;
+  placeholderId: string;
   type: 'image' | 'video';
-  source: 'upload' | 'ai';
-  url: string | null; // URL string or object URL for preview
+  source: 'upload' | 'ai' | 'drive';
+  url: string | null;
   fileName?: string;
   aiPrompt?: string;
   generationStatus?: 'idle' | 'generating' | 'success' | 'failed';
 }
 
-export interface Project {
-  id: string;
-  projectName: string;
-  clientName: string;
-  companyName: string;
-  industry: string;
-  tutorialId: string;
-  // Portada: 'template' = diseño SUAMA (título+logo sobre fondo);
-  //          'custom'   = imagen/video propio a pantalla completa, sin overlay.
-  portadaMode?: 'template' | 'custom';
-  // Cierre (igual que la portada): 'template' = diseño con mensaje/logo;
-  //          'custom'   = imagen/video propio a pantalla completa, sin overlay.
-  cierreMode?: 'template' | 'custom';
-  identity: ClientIdentity;
-  slots: Slot[];
-  media: Record<string, MediaItem>; // maps placeholderId -> MediaItem
-  voiceScript: Record<string, string>; // maps slotId -> voice text script
-  voiceAudioUrls: Record<string, string>; // maps slotId -> audio URL
+// Módulo completo del curso
+export interface CourseModule {
+  id: string;              // 'module_00', 'module_01', 'module_02', 'module_03', 'module_close'
+  type: 'intro' | 'content' | 'closing'; // tipo de módulo
+  title: string;           // Nombre del módulo
+  objective?: string;      // Objetivo de aprendizaje del módulo
+  active: boolean;         // Si se incluye en la producción
+  
+  // Video
+  videoScript: string;     // Guión completo narrado del video (varios párrafos)
+  slides: CourseSlide[];   // Slides del video
+  
+  // Media
+  backgroundMediaId?: string; // Media de fondo general del módulo
+  media: Record<string, MediaItem>; // placeholderId → MediaItem
+  
+  // Audio
+  voiceAudioUrl?: string;  // URL del audio generado con ElevenLabs
+  
+  // Materiales del módulo
+  downloadableMaterials: DownloadableMaterial[];
+  activities: PracticeActivity[];
+  
+  // Render
   renderStatus?: 'idle' | 'rendering' | 'success' | 'failed';
   renderProgress?: number;
+  renderedVideoUrl?: string; // URL del MP4 final en Shotstack/Drive
+}
+
+// Curso completo
+export interface Course {
+  id: string;
+  courseName: string;       // Nombre del curso
+  slug: string;             // Identificador único del catálogo (ej: 'ikigai_emprender')
+  description: string;
+  estimatedDuration: string;// "60–90 minutos"
+  level: string;            // "introductorio" | "intermedio" | "avanzado"
+  identity: CourseIdentity;
+  modules: CourseModule[];
+  exam: CourseExam;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Metadata del catálogo de cursos
+export interface CourseMeta {
+  id: string;
+  slug: string;
+  name: string;
+  label: string;
+  description: string;
+  estimatedDuration: string;
+  level: string;
+  moduleCount: number;
 }
