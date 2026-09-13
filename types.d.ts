@@ -12,9 +12,11 @@ declare module 'lucide-react' {
   export const AlertTriangle: LucideIcon;
   export const ArrowLeft: LucideIcon;
   export const ArrowRight: LucideIcon;
+  export const BookOpen: LucideIcon;
   export const Check: LucideIcon;
   export const CheckCircle: LucideIcon;
   export const CheckCircle2: LucideIcon;
+  export const CheckSquare: LucideIcon;
   export const ChevronDown: LucideIcon;
   export const ChevronRight: LucideIcon;
   export const ChevronUp: LucideIcon;
@@ -26,9 +28,11 @@ declare module 'lucide-react' {
   export const Eye: LucideIcon;
   export const EyeOff: LucideIcon;
   export const File: LucideIcon;
+  export const FileCode: LucideIcon;
   export const FileText: LucideIcon;
   export const Film: LucideIcon;
   export const Globe: LucideIcon;
+  export const GraduationCap: LucideIcon;
   export const HelpCircle: LucideIcon;
   export const Image: LucideIcon;
   export const Info: LucideIcon;
@@ -45,6 +49,7 @@ declare module 'lucide-react' {
   export const Pause: LucideIcon;
   export const Play: LucideIcon;
   export const Plus: LucideIcon;
+  export const Printer: LucideIcon;
   export const RefreshCw: LucideIcon;
   export const Save: LucideIcon;
   export const Settings: LucideIcon;

@@ -2,15 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useProjectStore } from '@/lib/store';
-import { useUiStore } from '@/lib/ui-store';
-import { SUAMA_COLORS, TUTORIAL_CATALOG } from '@/lib/constants';
+import { useCourseStore } from '@/lib/store';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import {
-  LayoutDashboard,
+  BookOpen,
   Paintbrush,
-  FileText,
   Image as ImageIcon,
   Mic,
   Video,
@@ -19,576 +16,352 @@ import {
   Clock,
   ArrowRight,
   Layers,
-  FileVideo,
-  Settings,
   Save,
   Download,
   Loader2,
+  GraduationCap,
+  FileText,
+  CheckSquare,
+  Sparkles,
 } from 'lucide-react';
 
-export default function Home() {
-  const { project, loadTutorial, applyNotionAssets } = useProjectStore();
-  const { dirty, saving: autoSaving, setDirty, setSuppressSave } = useUiStore();
+export default function Dashboard() {
+  const { course, setActiveModuleId, toggleModule } = useCourseStore();
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const handleSaveToNotion = async () => {
     setSaving(true);
     setSaveMsg(null);
     try {
-      // sync → upsert de una fila por módulo (Link Drive + Audio + contenido)
-      // en la DB Proyectos. Notion es la BBDD persistente del proyecto.
       const res = await fetch('/api/notion/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project, estado: 'Borrador' }),
+        body: JSON.stringify({ course, estado: 'Borrador' }),
       });
       const data = await res.json();
-      if (data.ok) setDirty(false);
-      setSaveMsg(data.ok ? '✓ Guardado en Notion' : `Error: ${data.error}`);
+      setSaveMsg(data.ok ? '✓ Guardado en Notion correctamente' : `Error: ${data.error || 'Fallo de sync'}`);
     } catch {
-      setSaveMsg('Error al conectar con Notion');
+      setSaveMsg('Error al conectar con el servidor');
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMsg(null), 4000);
     }
   };
 
-  // Carga rápida: lee las filas por módulo de Notion (Link Drive + Audio) del
-  // cliente+tutorial actuales y las aplica a los medios de la app. Una sola query.
-  const handleLoadFromNotion = async () => {
-    if (!project.clientName?.trim()) {
-      setSaveMsg('Elegí un cliente primero (Identidad Visual)');
-      setTimeout(() => setSaveMsg(null), 4000);
-      return;
-    }
-    setLoading(true);
-    setSaveMsg(null);
-    // Pausar autoguardado: lo que cargamos YA está en Notion, no hay que re-subirlo.
-    setSuppressSave(true);
-    try {
-      const res = await fetch(
-        `/api/notion/load-assets?clientName=${encodeURIComponent(project.clientName)}&tutorialId=${project.tutorialId}`,
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al leer Notion');
-      const count = data.assets ? Object.keys(data.assets).length : 0;
-      if (count > 0) {
-        applyNotionAssets(data.assets);
-        setSaveMsg(`✓ ${count} módulo(s) cargados desde Notion`);
-      } else {
-        setSaveMsg('No hay assets guardados para este cliente/tutorial');
-      }
-    } catch (e) {
-      setSaveMsg(e instanceof Error ? e.message : 'Error al leer Notion');
-    } finally {
-      setLoading(false);
-      setDirty(false);
-      setSuppressSave(false);
-      setTimeout(() => setSaveMsg(null), 5000);
-    }
-  };
-
-  // Calcular métricas
-  const totalSlots = project.slots.length;
-  const activeSlots = project.slots.filter(s => s.active).length;
-  const activeSlotsPercent = Math.round((activeSlots / totalSlots) * 100);
-
-  const isSlot01Active = project.slots.find(s => s.id === 'SLOT_01')?.active;
-  const slot08 = project.slots.find(s => s.id === 'SLOT_08');
-  const activeRiskModules = slot08?.active ? (slot08.riskModules?.filter(rm => rm.active) || []) : [];
-
-  // Misma lógica que la página de Medios: todos los placeholders (Visual 1/2/3)
-  // por cada slot activo, más los riesgos. Portada = 1 visual; resto = hasta 3.
-  const VISUALS_PER_SLOT = 3;
-  const slotBaseKey = (slotId: string) =>
-    slotId === 'SLOT_01' ? 'portada_img'
-    : slotId === 'SLOT_02' ? 'objetivos_img'
-    : `${slotId.toLowerCase()}_img`;
-
-  const requiredMediaIds: string[] = [];
-  for (const slot of project.slots.filter(s => s.active)) {
-    if (slot.id === 'SLOT_08') {
-      activeRiskModules.forEach(rm => {
-        for (let k = 1; k <= VISUALS_PER_SLOT; k++) {
-          requiredMediaIds.push(k === 1 ? rm.mediaId : `${rm.mediaId}_${k}`);
-        }
-      });
-    } else {
-      const base = slotBaseKey(slot.id);
-      const count = slot.id === 'SLOT_01' ? 1 : VISUALS_PER_SLOT;
-      for (let k = 1; k <= count; k++) {
-        requiredMediaIds.push(k === 1 ? base : `${base}_${k}`);
-      }
-    }
-  }
-
-  const totalMediaRequired = requiredMediaIds.length;
-  const totalMediaUploaded = requiredMediaIds.filter(id => project.media[id]?.url !== null).length;
-  const mediaPercent = totalMediaRequired > 0 ? Math.round((totalMediaUploaded / totalMediaRequired) * 100) : 100;
-
-  // Voz en off: contar cuántos audios/scripts activos están completos
-  const activeSlotIds = project.slots.filter(s => s.active).map(s => s.id);
-  const voiceScriptsCount = activeSlotIds.filter(id => {
-    if (id === 'SLOT_08') {
-      // Para SLOT_08, contamos los audios de los submódulos activos
-      const activeRiskIds = activeRiskModules.map(rm => rm.id);
-      const filledRisks = activeRiskIds.filter(rid => project.voiceScript[rid] && project.voiceScript[rid].trim() !== '');
-      return filledRisks.length === activeRiskIds.length;
-    }
-    return project.voiceScript[id] && project.voiceScript[id].trim() !== '';
-  }).length;
-  
-  const totalVoiceRequirements = activeSlotIds.includes('SLOT_08') 
-    ? (activeSlotIds.length - 1 + activeRiskModules.length) 
-    : activeSlotIds.length;
-
-  const voiceScriptsFilled = activeSlotIds.reduce((acc, id) => {
-    if (id === 'SLOT_08') {
-      const activeRiskIds = activeRiskModules.map(rm => rm.id);
-      const filled = activeRiskIds.filter(rid => project.voiceScript[rid] && project.voiceScript[rid].trim() !== '').length;
-      return acc + filled;
-    }
-    return acc + (project.voiceScript[id] && project.voiceScript[id].trim() !== '' ? 1 : 0);
-  }, 0);
-
-  const voicePercent = totalVoiceRequirements > 0 ? Math.round((voiceScriptsFilled / totalVoiceRequirements) * 100) : 100;
-
-  // Audios listos: un audio (voz en off) por cada módulo activo. Los slots de
-  // riesgo (SLOT_08) cuentan por cada submódulo activo; el resto, por slot.
-  const audioRequiredKeys: string[] = [];
-  project.slots.filter(s => s.active).forEach(s => {
-    if (s.id === 'SLOT_08') activeRiskModules.forEach(rm => audioRequiredKeys.push(rm.id));
-    else audioRequiredKeys.push(s.id);
-  });
-  const totalAudioRequired = audioRequiredKeys.length;
-  const totalAudioReady = audioRequiredKeys.filter(k => {
-    const u = project.voiceAudioUrls?.[k];
-    return typeof u === 'string' && u.trim() !== '';
-  }).length;
-  const audioPercent = totalAudioRequired > 0 ? Math.round((totalAudioReady / totalAudioRequired) * 100) : 0;
-
-  // Estado general de completitud
-  const generalProgress = Math.round(
-    ((project.identity.logoUrl ? 100 : 0) + activeSlotsPercent + mediaPercent + voicePercent) / 4
-  );
-
-  // Estimación de duración (150 palabras de voz en off por minuto)
-  const totalWords = Object.entries(project.voiceScript)
-    .filter(([key]) => {
-      // Filtrar sólo las que están activas
-      if (['SLOT_01', 'SLOT_02', 'SLOT_03', 'SLOT_04', 'SLOT_05', 'SLOT_06', 'SLOT_07', 'SLOT_09', 'SLOT_10'].includes(key)) {
-        return project.slots.find(s => s.id === key)?.active;
-      }
-      // Si es un riesgo, ver si SLOT_08 y el riesgo están activos
-      if (slot08?.active) {
-        return slot08.riskModules?.find(rm => rm.id === key)?.active;
-      }
-      return false;
-    })
-    .reduce((acc, [_, text]) => acc + text.split(/\s+/).filter(Boolean).length, 0);
-  
-  const estimatedSeconds = Math.round((totalWords / 150) * 60) + (activeSlots * 2); // 2 segundos extra de transiciones por slide
-  const formatDuration = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remainingSecs = secs % 60;
-    return `${mins}m ${remainingSecs}s`;
-  };
-
-  // El dashboard (chrome de la app) mantiene SIEMPRE el brand SUAMA, no el del cliente.
-  const currentThemeColor = SUAMA_COLORS.primary;
+  const totalModules = course.modules.length;
+  const activeModules = course.modules.filter((m) => m.active).length;
+  const totalSlides = course.modules.reduce((acc, m) => acc + (m.active ? m.slides.length : 0), 0);
+  const audioReadyCount = course.modules.filter((m) => m.active && m.voiceAudioUrl).length;
+  const videoReadyCount = course.modules.filter((m) => m.active && m.renderedVideoUrl).length;
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      {/* Welcome Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/30 border border-slate-800/80 rounded-2xl p-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
-        
-        <div className="space-y-2">
-          <span className="text-xs font-semibold text-primary uppercase tracking-wider">Panel General</span>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            Configuración de Video Tutorial
-          </h1>
-          <p className="text-sm text-slate-400 max-w-xl">
-            Cargá la identidad de marca, definí el contenido y los medios de apoyo para generar el video del cliente en Shotstack.
-          </p>
-        </div>
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      {/* Top Banner: Course Overview */}
+      <div className="relative rounded-3xl p-8 overflow-hidden border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-950 shadow-2xl">
+        <div
+          className="absolute -right-24 -top-24 w-96 h-96 rounded-full opacity-20 pointer-events-none blur-3xl"
+          style={{ backgroundColor: course.identity.colors.primary }}
+        />
 
-        {/* Save / Load Notion */}
-        <div className="flex flex-col gap-2">
-          <Button
-            onClick={handleSaveToNotion}
-            disabled={saving}
-            variant="primary"
-            size="sm"
-            icon={saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-          >
-            {saving ? 'Guardando…' : 'Guardar en Notion'}
-          </Button>
-          <Button
-            onClick={handleLoadFromNotion}
-            disabled={loading}
-            variant="ghost"
-            size="sm"
-            icon={loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-          >
-            {loading ? 'Cargando…' : 'Cargar de Notion'}
-          </Button>
-          {saveMsg ? (
-            <p className="text-[11px] text-center font-semibold text-primary">{saveMsg}</p>
-          ) : (
-            <p className="text-[11px] text-center font-medium text-slate-500">
-              {autoSaving ? '⟳ Autoguardando…' : dirty ? '● Cambios sin guardar' : '✓ Sincronizado con Notion'}
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 rounded-full text-xs font-black bg-primary/20 text-primary border border-primary/30 uppercase tracking-wider">
+                {course.level}
+              </span>
+              <span className="text-xs text-slate-400 flex items-center gap-1.5 font-medium">
+                <Clock className="w-3.5 h-3.5 text-teal-400" />
+                {course.estimatedDuration}
+              </span>
+            </div>
+
+            <h1 className="text-3xl font-black text-white tracking-tight">
+              {course.courseName}
+            </h1>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              {course.description}
             </p>
-          )}
-        </div>
+          </div>
 
-        {/* Template Selector */}
-        <div className="flex flex-col space-y-2 bg-slate-950/50 border border-slate-800 p-4 rounded-xl md:w-80">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Seleccionar Tutorial</span>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[9px] text-slate-600 font-semibold uppercase tracking-wider mt-1">Riesgos Laborales</span>
-            {TUTORIAL_CATALOG.filter(t => t.structure === 'riesgos').map(t => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  if (project.tutorialId === t.id) return;
-                  if (confirm(`¿Cargar la plantilla "${t.name}"? Se perderán los cambios actuales.`)) {
-                    loadTutorial(t.id);
-                  }
-                }}
-                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 text-left ${
-                  project.tutorialId === t.id
-                    ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,153,139,0.15)]'
-                    : 'bg-transparent border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                {t.name}
-              </button>
-            ))}
-            <span className="text-[9px] text-slate-600 font-semibold uppercase tracking-wider mt-2">Otros</span>
-            {TUTORIAL_CATALOG.filter(t => t.structure !== 'riesgos').map(t => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  if (project.tutorialId === t.id) return;
-                  if (confirm(`¿Cargar la plantilla "${t.name}"? Se perderán los cambios actuales.`)) {
-                    loadTutorial(t.id);
-                  }
-                }}
-                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 text-left ${
-                  project.tutorialId === t.id
-                    ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(0,153,139,0.15)]'
-                    : 'bg-transparent border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                {t.name}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            <Button
+              onClick={handleSaveToNotion}
+              disabled={saving}
+              variant="outline"
+              className="bg-slate-800/80 border-slate-700 text-xs font-bold"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-primary" />
+                  Sincronizando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2 text-primary" />
+                  Guardar en Notion
+                </>
+              )}
+            </Button>
+
+            <Link href="/modulos">
+              <Button className="w-full sm:w-auto text-xs font-bold shadow-lg shadow-primary/20">
+                <BookOpen className="w-4 h-4 mr-2" />
+                Abrir Editor
+              </Button>
+            </Link>
           </div>
         </div>
+
+        {saveMsg && (
+          <div className="mt-4 p-3 rounded-xl bg-slate-800/90 border border-primary/30 text-xs text-teal-300 font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+            <span>{saveMsg}</span>
+          </div>
+        )}
       </div>
 
-      {/* Progress Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        {/* Progress Ring Card */}
-        <Card className="flex items-center space-x-4">
-          <div className="relative w-16 h-16 shrink-0">
-            {/* SVG Progress Circle */}
-            <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
-              <circle
-                cx="40"
-                cy="40"
-                r="34"
-                className="stroke-slate-800 fill-none"
-                strokeWidth="6"
-              />
-              <circle
-                cx="40"
-                cy="40"
-                r="34"
-                className="fill-none transition-all duration-500 ease-out"
-                stroke={currentThemeColor}
-                strokeWidth="6"
-                strokeDasharray={`${2 * Math.PI * 34}`}
-                strokeDashoffset={`${2 * Math.PI * 34 * (1 - generalProgress / 100)}`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-base font-bold text-white">{generalProgress}%</span>
-            </div>
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-5 border-slate-800 bg-slate-900/40">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Módulos Activos</span>
+            <Layers className="w-4 h-4 text-primary" />
           </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Progreso Total</h3>
-            <p className="text-base font-bold text-white mt-1 leading-tight truncate">Configuración</p>
-            <span className="text-[10px] text-slate-500 block truncate">4 módulos</span>
+          <div className="text-2xl font-black text-white mt-2">
+            {activeModules} <span className="text-xs font-normal text-slate-400">/ {totalModules}</span>
           </div>
         </Card>
 
-        {/* Stats 2: Active Slots */}
-        <Card className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-            <Layers className="w-6 h-6" />
+        <Card className="p-5 border-slate-800 bg-slate-900/40">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Slides</span>
+            <BookOpen className="w-4 h-4 text-amber-400" />
           </div>
-          <div>
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Escenas Activas</h3>
-            <p className="text-2xl font-bold text-white mt-1">{activeSlots} / {totalSlots}</p>
-            <span className="text-[11px] text-blue-400">{activeSlotsPercent}% del video incluido</span>
+          <div className="text-2xl font-black text-white mt-2">{totalSlides}</div>
+        </Card>
+
+        <Card className="p-5 border-slate-800 bg-slate-900/40">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Voces Generadas</span>
+            <Mic className="w-4 h-4 text-teal-400" />
+          </div>
+          <div className="text-2xl font-black text-white mt-2">
+            {audioReadyCount} <span className="text-xs font-normal text-slate-400">/ {activeModules}</span>
           </div>
         </Card>
 
-        {/* Stats 3: Media Uploaded */}
-        <Card className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <ImageIcon className="w-6 h-6" />
+        <Card className="p-5 border-slate-800 bg-slate-900/40">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Videos Renderizados</span>
+            <Video className="w-4 h-4 text-emerald-400" />
           </div>
-          <div>
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Imágenes / Videos</h3>
-            <p className="text-2xl font-bold text-white mt-1">{totalMediaUploaded} / {totalMediaRequired}</p>
-            <span className="text-[11px] text-amber-400">{mediaPercent}% de los slots con imagen</span>
-          </div>
-        </Card>
-
-        {/* Stats 4: Audios listos */}
-        <Card className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
-            <Mic className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Audios Listos</h3>
-            <p className="text-2xl font-bold text-white mt-1">{totalAudioReady} / {totalAudioRequired}</p>
-            <span className="text-[11px] text-rose-400">{audioPercent}% de la voz en off generada</span>
-          </div>
-        </Card>
-
-        {/* Stats 5: Estimated Duration */}
-        <Card className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Duración Est.</h3>
-            <p className="text-2xl font-bold text-white mt-1">{formatDuration(estimatedSeconds)}</p>
-            <span className="text-[11px] text-purple-400">{totalWords} palabras en guion</span>
+          <div className="text-2xl font-black text-white mt-2">
+            {videoReadyCount} <span className="text-xs font-normal text-slate-400">/ {activeModules}</span>
           </div>
         </Card>
       </div>
 
-      {/* Modules Flow and Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Steps Flow (2 cols) */}
-        <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-lg font-bold text-white tracking-wider flex items-center">
-            <Settings className="w-4 h-4 mr-2 text-primary" />
-            Flujo de Preparación
-          </h2>
+      {/* Modules Production Grid */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-black text-white">Estructura y Módulos del Curso</h2>
+            <p className="text-xs text-slate-400">Seguimiento individual de producción de cada pieza pedagógica</p>
+          </div>
+          <span className="text-xs font-bold text-teal-400">
+            {Math.round((videoReadyCount / Math.max(1, activeModules)) * 100)}% Completado
+          </span>
+        </div>
 
-          <div className="space-y-4">
-            {/* Step 1: Identidad */}
-            <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-900/25 border border-slate-800 hover:border-slate-800/80 transition-all">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                1
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-white text-sm">Identidad Visual</h3>
-                  {project.identity.logoUrl ? (
-                    <span className="flex items-center text-xs text-primary font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Listo
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {course.modules.map((module, idx) => {
+            const isAudioReady = !!module.voiceAudioUrl;
+            const isVideoReady = !!module.renderedVideoUrl;
+
+            return (
+              <Card
+                key={module.id}
+                className={`p-6 border transition-all duration-300 flex flex-col justify-between ${
+                  module.active
+                    ? 'border-slate-800 bg-slate-900/60 hover:border-primary/50 shadow-lg'
+                    : 'border-slate-800/40 bg-slate-950/40 opacity-60'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-300">
+                      {module.type === 'intro' ? 'Introducción' : module.type === 'closing' ? 'Cierre' : `Módulo ${idx}`}
                     </span>
-                  ) : (
-                    <span className="flex items-center text-xs text-amber-500 font-medium">
-                      <AlertCircle className="w-3.5 h-3.5 mr-1" /> Falta logo
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400 mt-1">Logo del cliente, paleta de colores corporativa y tipografía principal.</p>
-                <div className="mt-3 flex items-center gap-3">
-                  <Link href="/identidad">
-                    <Button variant="ghost" size="sm" icon={<Paintbrush className="w-3 h-3" />}>
-                      Configurar Identidad
-                    </Button>
-                  </Link>
-                  {project.identity.logoUrl && (
-                    <div className="flex items-center space-x-2 text-xs">
-                      <div className="w-5 h-5 rounded overflow-hidden bg-white/10 flex items-center justify-center">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={project.identity.logoUrl} alt="logo" className="w-full h-full object-contain" />
-                      </div>
-                      <div className="flex space-x-1.5">
-                        <div className="w-3 h-3 rounded-full border border-white/10" style={{ backgroundColor: project.identity.colors.primary }} />
-                        <div className="w-3 h-3 rounded-full border border-white/10" style={{ backgroundColor: project.identity.colors.secondary }} />
-                        <div className="w-3 h-3 rounded-full border border-white/10" style={{ backgroundColor: project.identity.colors.accent }} />
-                      </div>
+                    <button
+                      onClick={() => toggleModule(module.id, !module.active)}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all ${
+                        module.active
+                          ? 'bg-primary/20 text-primary border border-primary/30'
+                          : 'bg-slate-800 text-slate-500'
+                      }`}
+                    >
+                      {module.active ? 'Activo' : 'Inactivo'}
+                    </button>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-white line-clamp-1">{module.title}</h3>
+                    <p className="text-xs text-slate-400 line-clamp-2 mt-1">
+                      {module.objective || module.videoScript.slice(0, 100) + '...'}
+                    </p>
+                  </div>
+
+                  {/* Status checklist */}
+                  <div className="pt-3 border-t border-slate-800/80 space-y-2 text-xs">
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span className="flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                        Slides
+                      </span>
+                      <span className="font-bold text-white">{module.slides.length}</span>
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
 
-            {/* Step 2: Contenido */}
-            <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-900/25 border border-slate-800 hover:border-slate-800/80 transition-all">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                2
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-white text-sm">Contenido Textual</h3>
-                  <span className="flex items-center text-xs text-primary font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> {activeSlots} / {totalSlots} escenas
-                  </span>
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span className="flex items-center gap-1.5">
+                        <Mic className="w-3.5 h-3.5 text-teal-400" />
+                        Voz en Off
+                      </span>
+                      {isAudioReady ? (
+                        <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Listo
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> Pendiente
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span className="flex items-center gap-1.5">
+                        <Video className="w-3.5 h-3.5 text-blue-400" />
+                        Video MP4
+                      </span>
+                      {isVideoReady ? (
+                        <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Renderizado
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold text-slate-400">Sin renderizar</span>
+                      )}
+                    </div>
+
+                    {module.downloadableMaterials.length > 0 && (
+                      <div className="flex items-center justify-between text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                          Guías Alumno
+                        </span>
+                        <span className="font-bold text-white">{module.downloadableMaterials.length}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">Habilitar/deshabilitar slots predefinidos y personalizar textos y listas de riesgos.</p>
-                <div className="mt-3">
-                  <Link href="/contenido">
-                    <Button variant="ghost" size="sm" icon={<FileText className="w-3 h-3" />}>
-                      Editar Textos
+
+                <div className="pt-4 mt-4 border-t border-slate-800 flex items-center gap-2">
+                  <Link
+                    href="/modulos"
+                    onClick={() => setActiveModuleId(module.id)}
+                    className="flex-1"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full text-xs font-bold bg-slate-800/50 hover:bg-slate-800 border-slate-700"
+                    >
+                      Editar Contenido
+                      <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-primary" />
+                    </Button>
+                  </Link>
+
+                  <Link
+                    href="/generar"
+                    onClick={() => setActiveModuleId(module.id)}
+                  >
+                    <Button
+                      variant="ghost"
+                      className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl"
+                      title="Generar MP4"
+                    >
+                      <Video className="w-4 h-4" />
                     </Button>
                   </Link>
                 </div>
-              </div>
-            </div>
-
-            {/* Step 3: Medios */}
-            <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-900/25 border border-slate-800 hover:border-slate-800/80 transition-all">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                3
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-white text-sm">Imágenes y Videos</h3>
-                  {totalMediaUploaded === totalMediaRequired ? (
-                    <span className="flex items-center text-xs text-primary font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Completo
-                    </span>
-                  ) : (
-                    <span className="flex items-center text-xs text-amber-500 font-medium">
-                      <AlertCircle className="w-3.5 h-3.5 mr-1" /> Faltan {totalMediaRequired - totalMediaUploaded} archivos
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Pegá URLs de Google Drive en cada placeholder.
-                  <span className="text-slate-600"> · Subida automática: pendiente (requiere Workspace o Cloudinary)</span>
-                </p>
-                <div className="mt-3">
-                  <Link href="/medios">
-                    <Button variant="ghost" size="sm" icon={<ImageIcon className="w-3 h-3" />}>
-                      Gestionar Medios
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 4: Voz en off */}
-            <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-900/25 border border-slate-800 hover:border-slate-800/80 transition-all">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                4
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-white text-sm">Voz en Off</h3>
-                  {voicePercent === 100 ? (
-                    <span className="flex items-center text-xs text-primary font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Guiones listos
-                    </span>
-                  ) : (
-                    <span className="flex items-center text-xs text-amber-500 font-medium">
-                      <AlertCircle className="w-3.5 h-3.5 mr-1" /> {voiceScriptsFilled} / {totalVoiceRequirements} listos
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400 mt-1">Revisar guion generado por slide y generar audio oficial con ElevenLabs.</p>
-                <div className="mt-3">
-                  <Link href="/voz">
-                    <Button variant="ghost" size="sm" icon={<Mic className="w-3 h-3" />}>
-                      Generar Locuciones
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Client & Render Quick Panel */}
-        <div className="space-y-6">
-          <h2 className="text-lg font-bold text-white tracking-wider">Resumen de Video</h2>
-          
-          <Card className="space-y-6 border border-slate-800/50">
-            {/* Project Header Info */}
-            <div className="space-y-2 pb-4 border-b border-slate-800/60">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cliente</span>
-              <p className="text-lg font-bold text-white truncate">{project.clientName}</p>
-              
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block pt-2">Proyecto</span>
-              <p className="text-sm font-semibold text-slate-300 truncate">{project.projectName}</p>
-            </div>
-
-            {/* Verification checklist */}
-            <div className="space-y-3">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Verificación de Render</span>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Identidad de Marca</span>
-                  {project.identity.logoUrl ? (
-                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                  )}
-                </div>
-                
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Escenas seleccionadas</span>
-                  {activeSlots > 0 ? (
-                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Imágenes y Videos ({totalMediaUploaded}/{totalMediaRequired})</span>
-                  {totalMediaUploaded === totalMediaRequired && totalMediaRequired > 0 ? (
-                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Voz en Off generada</span>
-                  {voicePercent === 100 ? (
-                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Render Link CTA */}
-            <div className="pt-2">
-              <Link href="/generar">
-                <Button 
-                  className="w-full" 
-                  variant={generalProgress === 100 ? 'primary' : 'secondary'}
-                  icon={<FileVideo className="w-4 h-4" />}
-                >
-                  Ir a Generar MP4
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            </div>
-          </Card>
+              </Card>
+            );
+          })}
         </div>
       </div>
 
-      {/* Modal: Cargar proyecto de Notion */}
+      {/* Bottom Section: Exam & Identity Quick Access */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Exam Quick Access */}
+        <Card className="p-6 border-slate-800 bg-slate-900/50 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-primary">
+              <CheckSquare className="w-5 h-5" />
+              <h3 className="font-black text-base text-white">Evaluación Final y LMS</h3>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Examen formal de {course.exam.questions.length} preguntas de opción múltiple. Configurado para aprobación con {course.exam.passingScore} respuestas correctas.
+            </p>
+            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300">
+              <span className="font-bold text-teal-400">Exportación LMS:</span> Formato GIFT (Moodle), Canvas y texto estructurado con 1 clic.
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-slate-800">
+            <Link href="/evaluacion">
+              <Button variant="outline" className="w-full text-xs font-bold border-slate-700">
+                Gestionar Examen y Exportar a LMS
+              </Button>
+            </Link>
+          </div>
+        </Card>
+
+        {/* Brand & Materials Quick Access */}
+        <Card className="p-6 border-slate-800 bg-slate-900/50 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-emerald-400">
+              <FileText className="w-5 h-5" />
+              <h3 className="font-black text-base text-white">Materiales Imprimibles (@media print)</h3>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Guías de trabajo para el alumno con diseño editorial SUAMA (Guía de Autoconocimiento, Caso Lucas, Mapa de Oportunidades, Guía de Validación y Brújula Emprendedora).
+            </p>
+            <div className="flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded-full border border-white/20"
+                style={{ backgroundColor: course.identity.colors.primary }}
+              />
+              <div
+                className="w-4 h-4 rounded-full border border-white/20"
+                style={{ backgroundColor: course.identity.colors.secondary }}
+              />
+              <div
+                className="w-4 h-4 rounded-full border border-white/20"
+                style={{ backgroundColor: course.identity.colors.accent }}
+              />
+              <span className="text-xs font-medium text-slate-400 ml-2">
+                Tipografía: <strong className="text-white capitalize">{course.identity.fontFamily}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-slate-800">
+            <Link href="/materiales">
+              <Button variant="outline" className="w-full text-xs font-bold border-slate-700">
+                Ver y Descargar Guías en PDF
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

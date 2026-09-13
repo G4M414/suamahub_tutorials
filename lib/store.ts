@@ -1,436 +1,346 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Project, ColorPalette, Slot, MediaItem, RiskSubModule, NotionClient } from './types';
-import { mockProjectTutorial01, TUTORIAL_MOCK_DATA } from './mock-data';
-import { migrateTutorialId } from './constants';
+import {
+  Course,
+  CourseIdentity,
+  CourseSlide,
+  DownloadableMaterial,
+  PracticeActivity,
+  MediaItem,
+  CourseExam,
+  ExamQuestion,
+} from './types';
+import { IKIGAI_COURSE, COURSE_DATA } from './course-data';
 
-interface ProjectStore {
-  project: Project;
-  
-  // Setters
-  setProjectName: (name: string) => void;
-  setClientName: (name: string) => void;
-  setCompanyName: (name: string) => void;
-  setIndustry: (industry: string) => void;
-  setPortadaMode: (mode: 'template' | 'custom') => void;
-  setCierreMode: (mode: 'template' | 'custom') => void;
+interface CourseStore {
+  course: Course;
+  activeModuleId: string;
 
-  // Identity
-  updateColors: (colors: Partial<ColorPalette>) => void;
-  updateFont: (font: string) => void;
-  updateLogo: (logoUrl: string | null) => void;
-  setSecondaryText: (text: string) => void;
-  loadClientIdentity: (client: NotionClient) => void;
-  loadProjectState: (state: Partial<Project>) => void;
-  applyNotionAssets: (assets: Record<string, {
-    linkDrive: string | null;
-    linkDrives?: string[];
-    audioUrl: string | null;
-    voiceScript?: string | null;
-    slotFields?: Record<string, unknown> | null;
-    kind?: 'image' | 'video' | 'other';
-    kinds?: ('image' | 'video' | 'other' | undefined)[];
-  }>) => void;
-  clearClientAssets: () => void;
+  // Navegación / Selección
+  setActiveModuleId: (moduleId: string) => void;
+
+  // Curso
+  loadCourse: (slug: string) => void;
+  loadCourseState: (state: Partial<Course>) => void;
+
+  // Identidad
+  updateIdentity: (identity: Partial<CourseIdentity>) => void;
+
+  // Módulos
+  toggleModule: (moduleId: string, active: boolean) => void;
+  updateModuleVideoScript: (moduleId: string, script: string) => void;
   
-  // Slots
-  toggleSlot: (slotId: string, active: boolean) => void;
-  updateSlotFields: (slotId: string, fields: Record<string, any>) => void;
+  // Slides
+  updateModuleSlide: (moduleId: string, slideId: string, updates: Partial<CourseSlide>) => void;
+  addSlide: (moduleId: string) => void;
+  removeSlide: (moduleId: string, slideId: string) => void;
+  reorderSlides: (moduleId: string, slides: CourseSlide[]) => void;
+
+  // Materiales
+  updateDownloadableMaterial: (moduleId: string, materialId: string, updates: Partial<DownloadableMaterial>) => void;
   
-  // Risk Modules
-  toggleRiskModule: (moduleId: string, active: boolean) => void;
-  updateRiskModule: (moduleId: string, updates: Partial<RiskSubModule>) => void;
-  
+  // Actividades
+  updateActivity: (moduleId: string, activityId: string, updates: Partial<PracticeActivity>) => void;
+
   // Media
-  updateMedia: (placeholderId: string, updates: Partial<MediaItem>) => void;
-  
-  // Voice Script
-  updateVoiceScript: (slotId: string, script: string) => void;
-  setVoiceAudioUrl: (slotId: string, url: string | null) => void;
-  
+  updateMedia: (moduleId: string, placeholderId: string, updates: Partial<MediaItem>) => void;
+
+  // Voz
+  setVoiceAudioUrl: (moduleId: string, url: string | null) => void;
+
+  // Examen
+  updateExam: (exam: Partial<CourseExam>) => void;
+  updateExamQuestion: (questionId: string, updates: Partial<ExamQuestion>) => void;
+  addExamQuestion: () => void;
+  removeExamQuestion: (questionId: string) => void;
+
   // Render
-  setRenderStatus: (status: 'idle' | 'rendering' | 'success' | 'failed', progress?: number) => void;
-  
+  setModuleRenderStatus: (moduleId: string, status: 'idle' | 'rendering' | 'success' | 'failed', progress?: number) => void;
+  setModuleRenderedUrl: (moduleId: string, url: string) => void;
+
   // Reset
-  resetToDemo: () => void;
-  loadTutorial: (tutorialId: string) => void;
-  fillMissingScripts: () => void;
+  resetToDefault: () => void;
 }
 
-export const useProjectStore = create<ProjectStore>()(
+export const useCourseStore = create<CourseStore>()(
   persist(
-    (set) => ({
-      project: { ...mockProjectTutorial01 },
-      
-      setProjectName: (name) =>
-        set((state) => ({
-          project: { ...state.project, projectName: name },
-        })),
-        
-      setClientName: (name) =>
-        set((state) => ({
-          project: { ...state.project, clientName: name },
+    (set, get) => ({
+      course: { ...IKIGAI_COURSE },
+      activeModuleId: 'module_00',
+
+      setActiveModuleId: (moduleId) => set({ activeModuleId: moduleId }),
+
+      loadCourse: (slug) => {
+        const found = COURSE_DATA[slug];
+        if (found) {
+          set({ course: JSON.parse(JSON.stringify(found)), activeModuleId: found.modules[0]?.id ?? 'module_00' });
+        }
+      },
+
+      loadCourseState: (state) =>
+        set((prev) => ({
+          course: { ...prev.course, ...state },
         })),
 
-      setCompanyName: (name) =>
+      updateIdentity: (identity) =>
         set((state) => ({
-          project: { ...state.project, companyName: name },
-        })),
-
-      setIndustry: (industry) =>
-        set((state) => ({
-          project: { ...state.project, industry },
-        })),
-
-      setPortadaMode: (mode) =>
-        set((state) => ({
-          project: { ...state.project, portadaMode: mode },
-        })),
-
-      setCierreMode: (mode) =>
-        set((state) => ({
-          project: { ...state.project, cierreMode: mode },
-        })),
-        
-      updateColors: (colors) =>
-        set((state) => ({
-          project: {
-            ...state.project,
+          course: {
+            ...state.course,
             identity: {
-              ...state.project.identity,
-              colors: { ...state.project.identity.colors, ...colors },
-            },
-          },
-        })),
-        
-      updateFont: (font) =>
-        set((state) => ({
-          project: {
-            ...state.project,
-            identity: { ...state.project.identity, fontFamily: font },
-          },
-        })),
-        
-      updateLogo: (logoUrl) =>
-        set((state) => ({
-          project: {
-            ...state.project,
-            identity: { ...state.project.identity, logoUrl },
-          },
-        })),
-        
-      setSecondaryText: (text) =>
-        set((state) => ({
-          project: {
-            ...state.project,
-            identity: { ...state.project.identity, secondaryText: text },
-          },
-        })),
-
-      // Carga la identidad de un cliente desde Notion.
-      // Quirúrgico: solo pisa datos del cliente + identidad visual.
-      // NO toca slots, media, voiceScript ni tutorialId (el contenido se conserva).
-      loadClientIdentity: (client) =>
-        set((state) => ({
-          project: {
-            ...state.project,
-            clientName: client.clientName || state.project.clientName,
-            companyName: client.companyName || state.project.companyName,
-            industry: client.industry || state.project.industry,
-            identity: {
-              ...state.project.identity,
-              logoUrl: client.logoUrl ?? state.project.identity.logoUrl,
-              fontFamily: client.fontFamily || state.project.identity.fontFamily,
-              colors: { ...state.project.identity.colors, ...client.colors },
-              secondaryText: client.secondaryText ?? state.project.identity.secondaryText ?? '',
-              assetsFolderUrl: client.assetsFolderUrl ?? state.project.identity.assetsFolderUrl,
+              ...state.course.identity,
+              ...identity,
+              colors: {
+                ...state.course.identity.colors,
+                ...(identity.colors ?? {}),
+              },
             },
           },
         })),
 
-      // Restaura el estado COMPLETO de un proyecto guardado en Notion
-      // (imágenes, voz, audio, slots, identidad). Reemplaza, no mergea.
-      loadProjectState: (s) =>
-        set((cur) => ({
-          project: {
-            ...cur.project,
-            ...(s.projectName !== undefined ? { projectName: s.projectName } : {}),
-            ...(s.clientName !== undefined ? { clientName: s.clientName } : {}),
-            ...(s.companyName !== undefined ? { companyName: s.companyName } : {}),
-            ...(s.industry !== undefined ? { industry: s.industry } : {}),
-            ...(s.tutorialId !== undefined ? { tutorialId: s.tutorialId } : {}),
-            ...(s.identity ? { identity: s.identity } : {}),
-            ...(s.slots ? { slots: s.slots } : {}),
-            ...(s.media ? { media: s.media } : {}),
-            ...(s.voiceScript ? { voiceScript: s.voiceScript } : {}),
-            ...(s.voiceAudioUrls ? { voiceAudioUrls: s.voiceAudioUrls } : {}),
-          },
-        })),
-
-      // Aplica los assets por módulo traídos de Notion (filas con Link Drive).
-      // Mapea moduleName → placeholder/slotId con el MISMO criterio que el sync:
-      //   slots normales: Nombre interno = slot.title; placeholder SLOT_01→portada_img,
-      //   SLOT_02→objetivos_img (o slot.mediaId); audio → voiceAudioUrls[slot.id]
-      //   módulos de riesgo: Nombre interno = rm.name; placeholder = rm.mediaId; audio → rm.id
-      applyNotionAssets: (assets) =>
-        set((state) => {
-          const media = { ...state.project.media };
-          const voiceAudioUrls = { ...state.project.voiceAudioUrls };
-          const voiceScript = { ...state.project.voiceScript };
-
-          // type: usa el kind detectado desde Drive (imagen/video). Si no vino kind
-          // (detección falló o no es un archivo de Drive), conserva el type existente
-          // o cae a 'image'. Así un MP4 de portada se restaura como video y no se rompe.
-          const setMedia = (placeholderId: string, url: string, kind?: 'image' | 'video' | 'other') => {
-            const existing = media[placeholderId];
-            const type: MediaItem['type'] =
-              kind === 'video' ? 'video'
-              : kind === 'image' ? 'image'
-              : existing?.type ?? 'image';
-            media[placeholderId] = existing
-              ? { ...existing, url, type }
-              : { id: `media_${placeholderId}_${Date.now()}`, placeholderId, type, source: 'upload', url };
-          };
-
-          // Mapea los hasta 3 visuales (linkDrives) del módulo a las claves
-          // base / base_2 / base_3, con el kind detectado de cada uno.
-          const setVisuals = (
-            baseKey: string,
-            a: { linkDrive: string | null; linkDrives?: string[]; kind?: 'image'|'video'|'other'; kinds?: ('image'|'video'|'other'|undefined)[] },
-          ) => {
-            const urls = (a.linkDrives && a.linkDrives.length > 0)
-              ? a.linkDrives
-              : (a.linkDrive ? [a.linkDrive] : []);
-            urls.forEach((url, k) => {
-              const key = k === 0 ? baseKey : `${baseKey}_${k + 1}`;
-              const kind = a.kinds?.[k] ?? (k === 0 ? a.kind : undefined);
-              setMedia(key, url, kind);
-            });
-          };
-
-          const slots = state.project.slots.map(slot => {
-            if (slot.id === 'SLOT_08' && slot.riskModules) {
-              const riskModules = slot.riskModules.map(rm => {
-                const a = assets[rm.name];
-                if (!a) return rm;
-                setVisuals(rm.mediaId, a);
-                if (a.audioUrl) voiceAudioUrls[rm.id] = a.audioUrl;
-                if (a.voiceScript) voiceScript[rm.id] = a.voiceScript;
-                // Restaurar causes y measures si los guardamos como JSON
-                if (a.slotFields) {
-                  const f = a.slotFields as { causes?: string[]; measures?: string[] };
-                  return {
-                    ...rm,
-                    ...(Array.isArray(f.causes)   ? { causes:   f.causes   } : {}),
-                    ...(Array.isArray(f.measures)  ? { measures: f.measures } : {}),
-                  };
-                }
-                return rm;
-              });
-              return { ...slot, riskModules };
-            } else {
-              const a = assets[slot.title];
-              if (!a) return slot;
-              // Clave base de media (mismo criterio que el timeline: slotBaseMediaKey).
-              const baseKey = slot.id === 'SLOT_01' ? 'portada_img'
-                            : slot.id === 'SLOT_02' ? 'objetivos_img'
-                            : `${slot.id.toLowerCase()}_img`;
-              setVisuals(baseKey, a);
-              if (a.audioUrl) voiceAudioUrls[slot.id] = a.audioUrl;
-              if (a.voiceScript) voiceScript[slot.id] = a.voiceScript;
-              // Restaurar campos de texto del slot (objectives, laws, definitions, etc.)
-              if (a.slotFields && typeof a.slotFields === 'object') {
-                return { ...slot, fields: { ...slot.fields, ...(a.slotFields as typeof slot.fields) } };
-              }
-              return slot;
-            }
-          });
-
-          return { project: { ...state.project, slots, media, voiceAudioUrls, voiceScript } };
-        }),
-
-      // Limpia los assets propios del cliente anterior (imágenes/videos + audios)
-      // dejando el contenido textual y la estructura de slots intactos.
-      // Se llama al cambiar de cliente: así un cliente sin links en Notion queda
-      // efectivamente vacío en vez de heredar los medios del cliente previo.
-      clearClientAssets: () =>
-        set((state) => {
-          const media: Record<string, MediaItem> = {};
-          for (const [key, item] of Object.entries(state.project.media)) {
-            media[key] = { ...item, url: null, generationStatus: 'idle' };
-          }
-          return { project: { ...state.project, media, voiceAudioUrls: {} } };
-        }),
-
-      toggleSlot: (slotId, active) =>
+      toggleModule: (moduleId, active) =>
         set((state) => ({
-          project: {
-            ...state.project,
-            slots: state.project.slots.map((slot) =>
-              slot.id === slotId ? { ...slot, active } : slot
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) =>
+              m.id === moduleId ? { ...m, active } : m
             ),
           },
         })),
-        
-      updateSlotFields: (slotId, fields) =>
+
+      updateModuleVideoScript: (moduleId, script) =>
         set((state) => ({
-          project: {
-            ...state.project,
-            slots: state.project.slots.map((slot) =>
-              slot.id === slotId
-                ? { ...slot, fields: { ...slot.fields, ...fields } }
-                : slot
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) =>
+              m.id === moduleId ? { ...m, videoScript: script } : m
             ),
           },
         })),
-        
-      toggleRiskModule: (moduleId, active) =>
+
+      updateModuleSlide: (moduleId, slideId, updates) =>
         set((state) => ({
-          project: {
-            ...state.project,
-            slots: state.project.slots.map((slot) => {
-              if (slot.id === 'SLOT_08' && slot.riskModules) {
-                return {
-                  ...slot,
-                  riskModules: slot.riskModules.map((mod) =>
-                    mod.id === moduleId ? { ...mod, active } : mod
-                  ),
-                };
-              }
-              return slot;
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) => {
+              if (m.id !== moduleId) return m;
+              return {
+                ...m,
+                slides: m.slides.map((s) => (s.id === slideId ? { ...s, ...updates } : s)),
+              };
             }),
           },
         })),
-        
-      updateRiskModule: (moduleId, updates) =>
+
+      addSlide: (moduleId) =>
         set((state) => ({
-          project: {
-            ...state.project,
-            slots: state.project.slots.map((slot) => {
-              if (slot.id === 'SLOT_08' && slot.riskModules) {
-                return {
-                  ...slot,
-                  riskModules: slot.riskModules.map((mod) =>
-                    mod.id === moduleId ? { ...mod, ...updates } : mod
-                  ),
-                };
-              }
-              return slot;
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) => {
+              if (m.id !== moduleId) return m;
+              const nextNum = m.slides.length + 1;
+              const newSlide: CourseSlide = {
+                id: `slide_${moduleId}_${String(nextNum).padStart(2, '0')}`,
+                title: `Nueva diapositiva ${nextNum}`,
+                content: 'Texto principal de la diapositiva...',
+                bulletPoints: ['Punto clave 1'],
+              };
+              return {
+                ...m,
+                slides: [...m.slides, newSlide],
+              };
             }),
           },
         })),
-        
-      updateMedia: (placeholderId, updates) =>
+
+      removeSlide: (moduleId, slideId) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) => {
+              if (m.id !== moduleId) return m;
+              return {
+                ...m,
+                slides: m.slides.filter((s) => s.id !== slideId),
+              };
+            }),
+          },
+        })),
+
+      reorderSlides: (moduleId, slides) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) =>
+              m.id === moduleId ? { ...m, slides } : m
+            ),
+          },
+        })),
+
+      updateDownloadableMaterial: (moduleId, materialId, updates) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) => {
+              if (m.id !== moduleId) return m;
+              return {
+                ...m,
+                downloadableMaterials: m.downloadableMaterials.map((mat) =>
+                  mat.id === materialId ? { ...mat, ...updates } : mat
+                ),
+              };
+            }),
+          },
+        })),
+
+      updateActivity: (moduleId, activityId, updates) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) => {
+              if (m.id !== moduleId) return m;
+              return {
+                ...m,
+                activities: m.activities.map((act) =>
+                  act.id === activityId ? { ...act, ...updates } : act
+                ),
+              };
+            }),
+          },
+        })),
+
+      updateMedia: (moduleId, placeholderId, updates) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) => {
+              if (m.id !== moduleId) return m;
+              const currentMedia = m.media[placeholderId] ?? {
+                id: `${moduleId}_${placeholderId}`,
+                placeholderId,
+                type: 'image',
+                source: 'upload',
+                url: null,
+                generationStatus: 'idle',
+              };
+              return {
+                ...m,
+                media: {
+                  ...m.media,
+                  [placeholderId]: {
+                    ...currentMedia,
+                    ...updates,
+                  },
+                },
+              };
+            }),
+          },
+        })),
+
+      setVoiceAudioUrl: (moduleId, url) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) =>
+              m.id === moduleId ? { ...m, voiceAudioUrl: url ?? undefined } : m
+            ),
+          },
+        })),
+
+      updateExam: (exam) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            exam: {
+              ...state.course.exam,
+              ...exam,
+            },
+          },
+        })),
+
+      updateExamQuestion: (questionId, updates) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            exam: {
+              ...state.course.exam,
+              questions: state.course.exam.questions.map((q) =>
+                q.id === questionId ? { ...q, ...updates } : q
+              ),
+            },
+          },
+        })),
+
+      addExamQuestion: () =>
         set((state) => {
-          const currentMedia = state.project.media[placeholderId] || {
-            id: `media_${placeholderId}_${Date.now()}`,
-            placeholderId,
-            type: 'image',
-            source: 'upload',
-            url: null,
+          const nextIndex = state.course.exam.questions.length + 1;
+          const newQ: ExamQuestion = {
+            id: `q_${String(nextIndex).padStart(2, '0')}`,
+            question: 'Nueva pregunta de opción múltiple...',
+            options: ['Opción A', 'Opción B', 'Opción C', 'Opción D'],
+            correctIndex: 0,
           };
           return {
-            project: {
-              ...state.project,
-              media: {
-                ...state.project.media,
-                [placeholderId]: { ...currentMedia, ...updates },
+            course: {
+              ...state.course,
+              exam: {
+                ...state.course.exam,
+                totalQuestions: state.course.exam.questions.length + 1,
+                questions: [...state.course.exam.questions, newQ],
               },
             },
           };
         }),
-        
-      updateVoiceScript: (slotId, script) =>
-        set((state) => ({
-          project: {
-            ...state.project,
-            voiceScript: {
-              ...state.project.voiceScript,
-              [slotId]: script,
-            },
-          },
-        })),
-        
-      setVoiceAudioUrl: (slotId, url) =>
-        set((state) => ({
-          project: {
-            ...state.project,
-            voiceAudioUrls: url
-              ? { ...state.project.voiceAudioUrls, [slotId]: url }
-              : Object.fromEntries(
-                  Object.entries(state.project.voiceAudioUrls).filter(([k]) => k !== slotId)
-                ),
-          },
-        })),
-        
-      setRenderStatus: (status, progress = 0) =>
-        set((state) => ({
-          project: {
-            ...state.project,
-            renderStatus: status,
-            renderProgress: progress,
-          },
-        })),
-        
-      resetToDemo: () =>
-        set(() => ({
-          project: JSON.parse(JSON.stringify(mockProjectTutorial01)),
-        })),
 
-      loadTutorial: (tutorialId) =>
-        set(() => ({
-          project: JSON.parse(
-            JSON.stringify(
-              TUTORIAL_MOCK_DATA[tutorialId] ?? mockProjectTutorial01
-            )
-          ),
-        })),
-
-      fillMissingScripts: () =>
+      removeExamQuestion: (questionId) =>
         set((state) => {
-          const template = TUTORIAL_MOCK_DATA[state.project.tutorialId] ?? mockProjectTutorial01;
-          const filled: Record<string, string> = {};
-          for (const [key, val] of Object.entries(template.voiceScript)) {
-            if (!state.project.voiceScript[key]?.trim()) {
-              filled[key] = val as string;
-            }
-          }
-          if (Object.keys(filled).length === 0) return state;
+          const updated = state.course.exam.questions.filter((q) => q.id !== questionId);
           return {
-            project: {
-              ...state.project,
-              voiceScript: { ...state.project.voiceScript, ...filled },
+            course: {
+              ...state.course,
+              exam: {
+                ...state.course.exam,
+                totalQuestions: updated.length,
+                questions: updated,
+              },
             },
           };
         }),
+
+      setModuleRenderStatus: (moduleId, status, progress) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) =>
+              m.id === moduleId
+                ? {
+                    ...m,
+                    renderStatus: status,
+                    ...(progress !== undefined ? { renderProgress: progress } : {}),
+                  }
+                : m
+            ),
+          },
+        })),
+
+      setModuleRenderedUrl: (moduleId, url) =>
+        set((state) => ({
+          course: {
+            ...state.course,
+            modules: state.course.modules.map((m) =>
+              m.id === moduleId ? { ...m, renderedVideoUrl: url, renderStatus: 'success', renderProgress: 100 } : m
+            ),
+          },
+        })),
+
+      resetToDefault: () => {
+        set({ course: JSON.parse(JSON.stringify(IKIGAI_COURSE)), activeModuleId: 'module_00' });
+      },
     }),
     {
-      name: 'suama-project-storage',
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-
-        state.project.tutorialId = migrateTutorialId(state.project.tutorialId);
-
-        const logo = state.project.identity.logoUrl;
-
-        // Las blob: URLs solo son válidas en la sesión que las creó. Y el viejo
-        // default '/logo-suama.jpg' es una ruta RELATIVA: el preview (isValidAssetUrl
-        // exige http/https) y Shotstack la descartan → corner sin logo en los slides.
-        // En ambos casos limpiamos a null; al (re)seleccionar el cliente se recarga
-        // el logo real (Drive URL) desde Notion vía loadClientIdentity.
-        if (logo?.startsWith('blob:') || logo === '/logo-suama.jpg') {
-          state.project.identity.logoUrl = null;
-        }
-
-        // Limpiar media con blob URLs — quedan sin URL para re-subir
-        const cleanedMedia = { ...state.project.media };
-        for (const key of Object.keys(cleanedMedia)) {
-          if (cleanedMedia[key]?.url?.startsWith('blob:')) {
-            cleanedMedia[key] = { ...cleanedMedia[key], url: null, generationStatus: 'idle' };
-          }
-        }
-        state.project.media = cleanedMedia;
-      },
+      name: 'suama-elearning-store',
     }
   )
 );
+
+// Alias para compatibilidad de componentes existentes
+export const useProjectStore = useCourseStore;
